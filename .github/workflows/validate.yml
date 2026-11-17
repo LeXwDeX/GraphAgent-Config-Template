@@ -41,6 +41,8 @@ jobs:
           path: runtime
 
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: runtime/package.json
 
       - name: Validate route catalog
         run: bun script/validate-route-catalog.ts "$GITHUB_WORKSPACE"
