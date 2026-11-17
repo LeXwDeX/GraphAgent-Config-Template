@@ -28,6 +28,7 @@ opencode DAG 编排的参考模板配置仓库（唯一权威源）。
 | --------------------- | ---------------------------------------------------------------------------- |
 | `ultra-flow-route.yaml` | 六积木（探索 → 设计 → 开发（计划驱动并行切片） → 验收 → 发布 → 汇总）+ 五道分级检查点（轻量方向判定 ×3、独立取证三件套 ×2）。检查点 verdict 为 `continue`/`replan`：continue 不扰流程，replan 唤醒父会话做 additive 重规划（findings 注入、回环 ≤3）。发布积木可由父对话在重定向时删除 |
 | `release-route.yaml`    | 发布装配：机制探测 → 版本推导（latest tag + commit 类型）→ 人工门（默认 hold，父会话注入确认后才 publish）→ 发布执行 → 验证 |
+| `research-to-prototype.yaml` | 调研到原型：`compose` 积木（`surveyor`）按目标展开只读调研，角度在运行时才定 → `architect` 收敛为一个架构并点出最危险的假设 → `prototyper` 只在 `prototypes/` 下做一次一次性实验 → 验证按其 `how_to_run` 原样重跑 → 审查攻击结论，评审决定即交给父会话的报告。声明了 `inputs`，可直接 `run.start { spec_path: "research-to-prototype", inputs: { objective } }` 启动，无需复制改写 |
 
 ## 积木式路线
 

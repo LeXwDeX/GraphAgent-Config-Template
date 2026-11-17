@@ -13,7 +13,11 @@ const routes = [
   "security-audit",
   "technical-design",
 ].flatMap((domain) => [`${domain}-full.yaml`, `${domain}-lite.yaml`])
-routes.push("release-route.yaml", "ultra-flow-route.yaml")
+routes.push(
+  "release-route.yaml",
+  "research-to-prototype.yaml",
+  "ultra-flow-route.yaml",
+)
 
 let fixture: string
 
@@ -110,6 +114,20 @@ describe("route catalog guardrails", () => {
     expect(result.exitCode).toBe(1)
     expect(result.stderr).toContain(
       "not in the compatible runtime agent catalog",
+    )
+  })
+
+  test("rejects a compose block whose composer is outside the compatible runtime agent catalog", async () => {
+    await rewrite(
+      "research-to-prototype.yaml",
+      "worker_type: surveyor",
+      "worker_type: surveyer",
+    )
+
+    const result = await validate()
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain(
+      'worker type "surveyer" is not in the compatible runtime agent catalog',
     )
   })
 })

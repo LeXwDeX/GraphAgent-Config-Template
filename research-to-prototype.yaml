@@ -1,0 +1,143 @@
+# Cross-domain route (not one of the 7 domain pairs): a question becomes one
+# disposable, runnable prototype. A surveyor composer fans the research out
+# after it has read the request (the angles are decided at run time, not
+# here), an architect turns the survey into one design and names its riskiest
+# assumption, and the prototyper tests that assumption under prototypes/. A
+# verification runs the prototype again from its own how_to_run, and a review
+# attacks the conclusion; the review decision is the report the parent gets.
+# Start it with
+# run.start { spec_path: "research-to-prototype", inputs: { objective } }:
+# put the question, the idea to prototype, and the constraints in `objective`.
+# The prototype is evidence, never production code; promoting it is a separate
+# decision for the human.
+title: "Research to prototype: survey → architecture → prototype → verification → review"
+inputs:
+  objective:
+    description: >-
+      The question to research and the idea to prototype, with the constraints
+      the answer must respect.
+config:
+  name: research-to-prototype
+  max_concurrency: 4
+  max_node_replan_attempts: 3
+  max_total_nodes: 24
+  node_defaults:
+    worker_config:
+      timeout_ms: 1800000
+  objective: >-
+    Research the request, choose one architecture, test its riskiest assumption
+    with one disposable prototype that someone else can run again from its
+    how_to_run, then verify and review the result.
+    Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The hypothesis the prototype states before its run restates the
+        riskiest assumption of the chosen architecture, with a success signal
+        that can show it false.
+    - id: AC2
+      text: >-
+        The prototype reports what it observed apart from what it infers, and
+        the stated result follows from the observation; a run that refutes the
+        hypothesis is reported as a refutation.
+    - id: AC3
+      text: >-
+        how_to_run names the prerequisites and the exact commands, and running
+        them as written from the workspace root reproduces the observation.
+    - id: AC4
+      text: >-
+        Every changed file lies under prototypes/, and the reported fingerprint
+        matches the workspace.
+  blocks:
+    - id: survey
+      kind: compose
+      worker_type: surveyor
+      required: true
+      instruction: >-
+        Find out what has to be known before choosing an architecture for the
+        request: the candidate approaches or the angles of the question, what
+        each costs and risks, what evidence shows it works in this setting, and
+        what would make it the wrong choice. Examine every candidate on the
+        same points so the results compare. Do not design the solution or write
+        code.
+
+    - id: architecture
+      kind: plan
+      worker_type: architect
+      depends_on: [survey]
+      required: true
+      instruction: >-
+        Turn the survey into one architecture for the request. Start from the
+        existing design: what the change must preserve and what constrains it,
+        citing files. Weigh the candidates that really differ and choose one.
+        Return these sections. options: each with its trade-offs. decision: the
+        chosen option, the reasons, and what would change your mind.
+        components: what each part is responsible for and where it meets
+        existing code. riskiest_assumption: the one claim that, if false, sinks
+        the design, written as a falsifiable claim that one small experiment
+        can test; the prototype that follows tests exactly this. risks and
+        open_questions: list every decision that belongs to the user instead of
+        settling it by guessing. When the survey does not support a choice,
+        name the missing evidence instead of choosing. Do not split the work
+        into packages and do not write code.
+
+    - id: prototype
+      kind: prototype
+      worker_type: prototyper
+      depends_on: [architecture]
+      required: true
+      instruction: >-
+        Build the smallest disposable experiment that tests the
+        riskiest_assumption of the architecture, and nothing else. Before
+        writing code, write down the hypothesis, which restates that
+        assumption, and the success_signal: the observation that would show it
+        holds and the one that would show it fails. Create everything under
+        prototypes/ in one directory of its own and never change product code,
+        tests, configuration, or lockfiles. Run the experiment and record what
+        you observed apart from what you infer; a run that refutes the
+        hypothesis is a result, not an error. Write the directory's README.md
+        and submit the same text as the summary, with these sections.
+        location: the directory. hypothesis and success_signal: as written
+        before the run. observations: what the run printed or did, quoted.
+        how_to_run: a recipe someone who did not build it can follow, not a
+        description of one: the prerequisites (runtime versions, installs,
+        environment variables, ports), then the exact commands in order, each
+        runnable as written from the workspace root and ending on its own (a
+        recipe that starts a server also exercises and stops it), then the
+        output that marks success and the output that marks failure. Run those
+        commands once, exactly as written, before you submit. Submit the files
+        you created and a stable fingerprint of them, and name the command that
+        computes it.
+
+    - id: prototype-check
+      kind: verify
+      depends_on: [prototype, architecture]
+      instruction: >-
+        Verify the prototype as someone who has only its summary and the
+        architecture. Quote the architecture's riskiest_assumption and the
+        prototype's hypothesis side by side in your summary; a different or
+        weaker claim is FAIL. From the workspace root, run the how_to_run
+        commands exactly as written, in order, without editing any file and
+        without repairing a command that does not work. PASS only when every
+        command runs as written, ends on its own, and the output matches the
+        success or failure signal the prototype states. A missing
+        prerequisite, a command that needs guessing, a result that contradicts
+        the observations, or a changed file outside prototypes/ is FAIL.
+        Compare the reported files and fingerprint with the workspace.
+
+    - id: prototype-review
+      kind: review
+      depends_on: [prototype-check]
+      lenses: [intent, completeness]
+      skeptics: 1
+      instruction: >-
+        Attack the conclusion, not the repository, using the verification
+        evidence and the files the prototype changed. Check that the prototype
+        tests the riskiest_assumption the verification names and not an easier
+        one, that the observation supports the stated result and no other
+        explanation fits as well, that how_to_run is actionable for someone who
+        did not build it, and that nothing changed outside prototypes/. A claim
+        the evidence does not support, or a result stated more strongly than
+        the observation, is a required action. In the decision summary give the
+        verdict, the directory under prototypes/, and what the prototype
+        showed; its README carries how_to_run.

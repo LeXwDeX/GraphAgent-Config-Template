@@ -17,14 +17,32 @@ const expected = domains
 // Cross-domain routes compose several domains into one topology; they are not
 // domain pairs, so they bypass the lite/topology checks but still carry
 // config with config.name == filename stem.
-const crossDomainRoutes = ["release-route.yaml", "ultra-flow-route.yaml"]
+const crossDomainRoutes = [
+  "release-route.yaml",
+  "research-to-prototype.yaml",
+  "ultra-flow-route.yaml",
+]
 const catalog = [...expected, ...crossDomainRoutes].sort()
 const routeNames = catalog.map((file) => path.basename(file, ".yaml"))
-// The compatible runtime gate (runtime-compat.json, commit b48dce46) rejects
-// any node whose worker_type is outside its builtin agent catalog
-// (build, plan, general, explore); the portable profile skips the catalog when
-// absent, so this check closes the gap config-side.
-const compatibleWorkerTypes = ["explore", "build", "plan", "general"]
+// The compatible runtime gate (runtime-compat.json, commit b2f5b464) rejects
+// any node whose worker_type is outside its builtin agent catalog (build, plan,
+// general, explore, researcher, architect, prototyper, review, auditor, and the
+// composers surveyor and mapper); the portable profile skips the catalog when
+// absent, so this check closes the gap config-side. Keep it in step with the
+// pinned commit.
+const compatibleWorkerTypes = [
+  "explore",
+  "build",
+  "plan",
+  "general",
+  "researcher",
+  "architect",
+  "prototyper",
+  "review",
+  "auditor",
+  "surveyor",
+  "mapper",
+]
 const files = (await fs.readdir(root))
   // Hidden dotfiles are delivery tooling (e.g. the SpecGit `.specgit.yaml`
   // binding), never route templates; the catalog inventory is over visible files.
