@@ -17,7 +17,11 @@ const expected = domains
 // Cross-domain routes compose several domains into one topology; they are not
 // domain pairs, so they bypass the lite/topology checks but still carry
 // config with config.name == filename stem.
-const crossDomainRoutes = ["release-route.yaml", "ultra-flow-route.yaml"]
+const crossDomainRoutes = [
+  "release-route.yaml",
+  "research-to-prototype.yaml",
+  "ultra-flow-route.yaml",
+]
 const catalog = [...expected, ...crossDomainRoutes].sort()
 const routeNames = catalog.map((file) => path.basename(file, ".yaml"))
 // The compatible runtime gate (runtime-compat.json, commit b2f5b464) rejects
