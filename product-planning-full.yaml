@@ -46,6 +46,7 @@ config:
     - id: uncertainty-prototype
       kind: prototype
       depends_on: [product-options]
+      required: false
       instruction: >-
         Prototype only the highest-value runnable uncertainty. Use the cheapest
         reversible artifact that can change the decision, define the prediction

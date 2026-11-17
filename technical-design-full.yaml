@@ -45,6 +45,7 @@ config:
     - id: design-prototype
       kind: prototype
       depends_on: [design-options]
+      required: false
       instruction: >-
         Test only the riskiest design assumption with a reversible prototype,
         benchmark, migration rehearsal, or concurrency harness. State the
