@@ -53,5 +53,5 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Validate every root workflow YAML
-        working-directory: runtime/packages/opencode
+        working-directory: runtime/packages/graphagent
         run: bun script/validate-dag-templates.ts "$GITHUB_WORKSPACE"
