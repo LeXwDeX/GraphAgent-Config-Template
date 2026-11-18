@@ -1,5 +1,10 @@
 # Full reference for an intermittent, cross-module, or high-impact defect.
 title: "Debug and repair (full): feedback loop → hypotheses → fix → regression proof"
+inputs:
+  objective:
+    description: >-
+      The defect to repair: the symptom as the user sees it, how it is
+      triggered, and where it was observed.
 config:
   name: debug-repair-full
   max_concurrency: 2
@@ -11,6 +16,7 @@ config:
   objective: >-
     Reproduce the exact defect, prove one root cause, implement the narrowest
     repair, and lock the behavior with a sensitive regression check.
+    Request: {{objective}}
   blocks:
     - id: reproduce-defect
       kind: debug

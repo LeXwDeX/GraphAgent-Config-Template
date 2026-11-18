@@ -1,6 +1,11 @@
 # Full reference for a multi-module or release-relevant project change. The
 # plan decides how many implementation slices run in parallel (fan_out).
 title: "Project development (full): evidence → design → plan-sized parallel slices → gates → review"
+inputs:
+  objective:
+    description: >-
+      The confirmed change to deliver: its scope, the behavior it must have, the
+      acceptance evidence, and what is out of scope.
 config:
   name: project-development-full
   max_concurrency: 4
@@ -12,6 +17,7 @@ config:
   objective: >-
     Deliver the confirmed change through plan-sized disjoint implementation
     slices, behavior-first checks, deterministic gates, and whole-change review.
+    Request: {{objective}}
   blocks:
     - id: development-map
       kind: explore

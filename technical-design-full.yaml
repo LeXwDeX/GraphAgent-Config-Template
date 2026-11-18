@@ -1,5 +1,10 @@
 # Full reference for a new subsystem, migration, or high-cost technical choice.
 title: "Technical design (full): map → model → alternatives → prototype → design"
+inputs:
+  objective:
+    description: >-
+      The technical change to design: the goal, the subsystem or migration it
+      touches, and the constraints the design must respect.
 config:
   name: technical-design-full
   max_concurrency: 3
@@ -11,6 +16,7 @@ config:
   objective: >-
     Produce an implementation-ready technical design with one owning module,
     explicit invariants, verified tradeoffs, and bounded migration packages.
+    Request: {{objective}}
   blocks:
     - id: existing-system
       kind: explore

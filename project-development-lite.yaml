@@ -1,5 +1,10 @@
 # Lightweight reference for one bounded module and one write owner.
 title: "Project development (lite): plan → code → verify → review"
+inputs:
+  objective:
+    description: >-
+      The bounded change to implement: its scope, the behavior to check, and what
+      is out of scope.
 config:
   name: project-development-lite
   max_concurrency: 2
@@ -10,6 +15,7 @@ config:
       timeout_ms: 1800000
   objective: >-
     Implement a bounded, confirmed change with one behavior check and the required package gates.
+    Request: {{objective}}
   blocks:
     - id: lite-development-plan
       kind: plan
@@ -25,7 +31,7 @@ config:
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
-        it does. Otherwise return REVISE or BLOCKED with exact reasons and
+        it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
         route and control changes.
 

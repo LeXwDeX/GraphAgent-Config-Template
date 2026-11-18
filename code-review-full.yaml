@@ -1,6 +1,11 @@
 # Full reference for a release, large PR, or cross-module change. Evidence lanes
 # remain independent; the final review is the only decision gate.
 title: "Code review (full): fixed point → independent evidence → gates → decision"
+inputs:
+  objective:
+    description: >-
+      The change to review: the pull request, branch, or commit range, what it
+      is meant to do, and any checks the repository requires.
 config:
   name: code-review-full
   max_concurrency: 4
@@ -12,6 +17,7 @@ config:
   objective: >-
     Review a pinned change independently for repository standards, confirmed
     intent, correctness, and operational risk, then return one auditable verdict.
+    Request: {{objective}}
   blocks:
     - id: pin-review
       kind: explore
