@@ -1,5 +1,10 @@
 # Lightweight reference for a small, bounded diff.
 title: "Code review (lite): pin diff → run gates → review"
+inputs:
+  objective:
+    description: >-
+      The bounded diff to review: the pull request, branch, or commit range, and
+      what it is meant to do.
 config:
   name: code-review-lite
   max_concurrency: 2
@@ -10,6 +15,7 @@ config:
       timeout_ms: 1800000
   objective: >-
     Review one bounded diff against its intent, repository rules, and required checks.
+    Request: {{objective}}
   blocks:
     - id: lite-review-scope
       kind: explore
@@ -25,7 +31,7 @@ config:
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
-        it does. Otherwise return REVISE or BLOCKED with exact reasons and
+        it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
         route and control changes.
 

@@ -28,7 +28,7 @@ opencode DAG 编排的参考模板配置仓库（唯一权威源）。
 | --------------------- | ---------------------------------------------------------------------------- |
 | `ultra-flow-route.yaml` | 六积木（探索 → 设计 → 开发（计划驱动并行切片） → 验收 → 发布 → 汇总）+ 五道分级检查点（轻量方向判定 ×3、独立取证三件套 ×2）。检查点 verdict 为 `continue`/`replan`：continue 不扰流程，replan 唤醒父会话做 additive 重规划（findings 注入、回环 ≤3）。发布积木可由父对话在重定向时删除 |
 | `release-route.yaml`    | 发布装配：机制探测 → 版本推导（latest tag + commit 类型）→ 人工门（默认 hold，父会话注入确认后才 publish）→ 发布执行 → 验证 |
-| `research-to-prototype.yaml` | 调研到原型：`compose` 积木（`surveyor`）按目标展开只读调研，角度在运行时才定 → `architect` 收敛为一个架构并点出最危险的假设 → `prototyper` 只在 `prototypes/` 下做一次一次性实验 → 验证按其 `how_to_run` 原样重跑 → 审查攻击结论，评审决定即交给父会话的报告。声明了 `inputs`，可直接 `run.start { spec_path: "research-to-prototype", inputs: { objective } }` 启动，无需复制改写 |
+| `research-to-prototype.yaml` | 调研到原型：`compose` 积木（`surveyor`）按目标展开只读调研，角度在运行时才定 → `architect` 收敛为一个架构并点出最危险的假设 → `prototyper` 只在 `prototypes/` 下做一次一次性实验 → 验证按其 `how_to_run` 原样重跑 → 审查攻击结论，评审决定即交给父会话的报告 |
 
 ## 积木式路线
 
@@ -60,6 +60,15 @@ review 绑定不变。只有一个包时按原样运行；写集重叠等无法�
 `workflow(action="validate", spec_path="<file>")` 校验，再以
 `workflow(action="start", spec_path="<file>")` 启动。模型调用不得猜测或内联
 嵌套 `spec`；模板目标已完全匹配时才直接使用该模板的 `spec_path`。
+
+每个模板都声明了必填输入 `objective`（请求原文、范围和已确认的约束），并在
+`config.objective` 或节点提示里以 `{{objective}}` 引用。拓扑不用改时，直接
+`run.start { spec_path: "<route>", inputs: { objective } }` 启动，无需复制改写；
+`validate` 接受同样的 `inputs`。只有要增删积木、改写指令时才复制成任务文件：
+保留 `inputs` 段并在 validate / start 时传入 `inputs`，或删去 `inputs` 段并把
+`{{objective}}` 换成具体目标。带 `inputs` 的文档总会被实例化，缺少必填输入会
+报错；没有 `inputs` 的文档收到 `inputs` 同样报错。新增模板也要声明并引用
+`objective`，运行时的模板 CI 会对缺少 `inputs` 的模板告警。
 
 ## 路由权威
 

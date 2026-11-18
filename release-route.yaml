@@ -1,8 +1,14 @@
 # Cross-domain route (not one of the 7 domain pairs): release assembly after
 # the final ordered merge. Default is a human gate — release-execute only runs
-# after the parent confirms the release brief. The parent retargets the
-# objective to the real plan and repository before start.
+# after the parent confirms the release brief. Start it with
+# run.start { spec_path: "release-route", inputs: { objective } }: put the real
+# plan and repository in `objective`.
 title: "Release assembly: mechanism probe → version derivation → human gate → publish → verify"
+inputs:
+  objective:
+    description: >-
+      The release to assemble: the plan or merged work being released, the
+      repository, and any version or channel constraint.
 config:
   name: release-route
   max_concurrency: 2
@@ -18,7 +24,9 @@ config:
       depends_on: []
       prompt_template:
         inline: >-
-          Probe the release mechanics of this repository: the workflow objective.
+          Request: {{objective}}
+
+          Probe the release mechanics of this repository for this request.
           Identify the release pathway (release workflow dispatch vs platform
           release creation vs package publish), the latest tag, branch
           protection or ruleset constraints on releasing, and what the merge

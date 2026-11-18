@@ -1,5 +1,10 @@
 # Lightweight reference for a deterministic, bounded defect.
 title: "Debug and repair (lite): reproduce → fix → verify"
+inputs:
+  objective:
+    description: >-
+      The reproducible defect to repair: the symptom, the steps or command that
+      trigger it, and where it was observed.
 config:
   name: debug-repair-lite
   max_concurrency: 1
@@ -10,6 +15,7 @@ config:
       timeout_ms: 1800000
   objective: >-
     Repair one reproducible defect through a minimal causal patch and regression check.
+    Request: {{objective}}
   blocks:
     - id: lite-reproduce
       kind: debug
@@ -25,7 +31,7 @@ config:
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
-        it does. Otherwise return REVISE or BLOCKED with exact reasons and
+        it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
         route and control changes.
 

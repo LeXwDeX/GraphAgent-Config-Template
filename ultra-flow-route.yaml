@@ -1,11 +1,18 @@
-# Cross-domain route (not one of the 7 domain pairs). The parent retargets
-# every stage to the real task, removes stage-release when the project has no
-# release mechanics, and starts the graph. Checkpoints are direction gates:
+# Cross-domain route (not one of the 7 domain pairs). Start it with
+# run.start { spec_path: "ultra-flow-route", inputs: { objective } }: the request
+# reaches every stage prompt. The parent removes stage-release, in a task copy,
+# when the project has no release mechanics. Checkpoints are direction gates:
 # verdict continue lets the flow run on untouched; verdict replan wakes the
 # parent, which adds correction nodes (findings as input, max 3 back-edges,
 # one decision point after the third). Stage 3 is plan-driven: its plan node
 # returns work packages and the development writer fans out over them.
 title: "Ultra flow: exploration → design → development → acceptance → release → summary with checkpoints"
+inputs:
+  objective:
+    description: >-
+      The request to carry from exploration to summary, in the user's words:
+      what to build or change, why, and the constraints and acceptance it
+      must meet.
 config:
   name: ultra-flow-route
   max_concurrency: 4
@@ -21,7 +28,9 @@ config:
       depends_on: []
       prompt_template:
         inline: >-
-          Explore the product side of this objective: the workflow objective. Establish
+          Request: {{objective}}
+
+          Explore the product side of this request. Establish
           the user, the job, current workarounds, pain, frequency, stakes, and
           the desired outcome. Separate observed facts from assumptions. Grill
           every materially ambiguous point into a sharp answer with an
@@ -49,7 +58,9 @@ config:
         required: [verdict, findings]
       prompt_template:
         inline: >-
-          Direction checkpoint. The objective is stated in your workflow context. Read the exploration
+          Request: {{objective}}
+
+          Direction checkpoint for this request. Read the exploration
           output above. Judge ONLY whether the direction is correct and whether
           a replan is needed before design begins. Verdict continue when the
           brief supports proceeding; replan with findings and the stage to
@@ -62,7 +73,9 @@ config:
       condition: cp-after-exploration.output.verdict == "continue"
       prompt_template:
         inline: >-
-          Design stage for the workflow objective. WHAT: define the behavior contract —
+          Request: {{objective}}
+
+          Design stage for this request. WHAT: define the behavior contract —
           observable behavior, acceptance scenarios, capability scope, suitable
           as the body of exactly one platform issue (the issue IS the atom; no
           X.Y task fragmentation). HOW: record a design decision only when the
@@ -76,7 +89,9 @@ config:
       depends_on: [stage-design]
       prompt_template:
         inline: >-
-          Independently assess the design stage output for the workflow objective:
+          Request: {{objective}}
+
+          Independently assess the design stage output for this request:
           completeness, testability, ambiguity, and repository convention fit.
           Cite each finding precisely and separate hard defects from judgement
           calls.
@@ -87,8 +102,10 @@ config:
       depends_on: [stage-design]
       prompt_template:
         inline: >-
+          Request: {{objective}}
+
           Independently compare the design stage output with the original
-          objective: the workflow objective. Identify missing intent, scope creep, and
+          request. Identify missing intent, scope creep, and
           requirements that look covered but are misread.
 
     - id: cp-design-decision
@@ -112,8 +129,10 @@ config:
         required: [verdict, findings]
       prompt_template:
         inline: >-
+          Request: {{objective}}
+
           Weighted design gate. Read both evidence nodes above and the design
-          output. Decide whether development may start for the workflow objective.
+          output. Decide whether development may start for this request.
           Verdict continue only when the design is faithful to intent and free
           of hard defects; otherwise replan with findings and target stage.
           Submit exactly the schema.
@@ -145,7 +164,9 @@ config:
         required: [summary, packages]
       prompt_template:
         inline: >-
-          Development planning for the workflow objective. From the confirmed
+          Request: {{objective}}
+
+          Development planning for this request. From the confirmed
           design, split the implementation into work packages; each package
           becomes one writer running concurrently in the same workspace. Split
           only where the work is genuinely independent and return a single
@@ -176,7 +197,9 @@ config:
         required: [summary, changed_files, fingerprint]
       prompt_template:
         inline: >-
-          Development stage for the workflow objective. Implement only the
+          Request: {{objective}}
+
+          Development stage for this request. Implement only the
           assigned work package and its write set: a failing behavior check at
           the public seam before the smallest change that passes it, and
           focused repository checks. Stop on ownership or interface drift and
@@ -204,9 +227,11 @@ config:
         required: [verdict, findings]
       prompt_template:
         inline: >-
-          Direction checkpoint. The objective is stated in your workflow context. Read the development
+          Request: {{objective}}
+
+          Direction checkpoint for this request. Read the development
           output above. Judge whether the implemented direction still matches
-          the design and objective, and whether acceptance testing may start.
+          the design and the request, and whether acceptance testing may start.
           Verdict continue or replan with findings and target. Submit exactly
           the schema.
 
@@ -217,7 +242,9 @@ config:
       condition: cp-after-development.output.verdict == "continue"
       prompt_template:
         inline: >-
-          Test and acceptance stage for the workflow objective. Run the documented gates
+          Request: {{objective}}
+
+          Test and acceptance stage for this request. Run the documented gates
           for every affected package and gather acceptance evidence: behavior
           checks at public seams, CI check status from the platform, and the
           difference between claimed and observed behavior. Bind every result
@@ -229,7 +256,9 @@ config:
       depends_on: [stage-acceptance]
       prompt_template:
         inline: >-
-          Independently assess the acceptance evidence for the workflow objective
+          Request: {{objective}}
+
+          Independently assess the acceptance evidence for this request
           against repository standards and required gates: completeness of the
           gate set, validity of the fingerprint binding, and any stale or
           missing evidence.
@@ -240,8 +269,10 @@ config:
       depends_on: [stage-acceptance]
       prompt_template:
         inline: >-
+          Request: {{objective}}
+
           Independently compare the acceptance evidence with the original
-          objective and the design-stage acceptance scenarios: the workflow objective.
+          request and the design-stage acceptance scenarios.
           Identify untested scenarios, weakened assertions, and behavior that
           was never asked for.
 
@@ -266,7 +297,9 @@ config:
         required: [verdict, findings]
       prompt_template:
         inline: >-
-          Weighted acceptance gate for the workflow objective. Read both evidence nodes
+          Request: {{objective}}
+
+          Weighted acceptance gate for this request. Read both evidence nodes
           above. Verdict continue only when CI is green, the review evidence
           supports delivery, and acceptance scenarios are genuinely covered;
           otherwise replan with findings and the stage to re-enter. Submit
@@ -279,7 +312,9 @@ config:
       condition: cp-acceptance-decision.output.verdict == "continue"
       prompt_template:
         inline: >-
-          Release stage for the workflow objective. Probe the repository's release
+          Request: {{objective}}
+
+          Release stage for this request. Probe the repository's release
           mechanics (release workflow vs platform release creation), the latest
           tag, and the commits landed by this plan. Derive the candidate
           version from tag plus commit types (feat → minor, fix → patch,
@@ -308,7 +343,9 @@ config:
         required: [verdict, findings]
       prompt_template:
         inline: >-
-          Direction checkpoint for the workflow objective. Read the release stage
+          Request: {{objective}}
+
+          Direction checkpoint for this request. Read the release stage
           output. Verdict continue when the release outcome (or its documented
           skip) is consistent with the plan; replan with findings and target
           otherwise. Submit exactly the schema.
@@ -320,7 +357,9 @@ config:
       condition: cp-after-release.output.verdict == "continue"
       prompt_template:
         inline: >-
-          Consolidated report for the workflow objective: stages executed including
+          Request: {{objective}}
+
+          Consolidated report for this request: stages executed including
           skips with reasons, issue numbers, PR URLs, CI status, replan passes
           used, merge position in the plan, release outcome, and any gate
           waiting on the human. Write the complete report to a non-empty

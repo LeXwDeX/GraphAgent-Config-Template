@@ -1,5 +1,10 @@
 # Lightweight read-only reference for one reported regression or hot path.
 title: "Performance audit (lite): baseline → inspect → measure"
+inputs:
+  objective:
+    description: >-
+      The reported regression or hot path to verify: what is slow, the workload
+      that shows it, and the baseline to compare against.
 config:
   name: performance-audit-lite
   max_concurrency: 2
@@ -10,6 +15,7 @@ config:
       timeout_ms: 1800000
   objective: >-
     Verify one bounded performance concern against a repeatable user-relevant baseline.
+    Request: {{objective}}
   blocks:
     - id: lite-performance-baseline
       kind: explore
@@ -25,7 +31,7 @@ config:
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
-        it does. Otherwise return REVISE or BLOCKED with exact reasons and
+        it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
         route and control changes.
 

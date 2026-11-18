@@ -1,6 +1,11 @@
 # Full reference for uncertain or high-impact product work. The parent confirms
 # the user-owned decision brief before start; child blocks do not ask questions.
 title: "Product planning (full): evidence → alternatives → prototype → product brief"
+inputs:
+  objective:
+    description: >-
+      The confirmed product brief: the request to decide on, the choices the
+      user has already made, and the constraints the answer must respect.
 config:
   name: product-planning-full
   max_concurrency: 3
@@ -12,6 +17,7 @@ config:
   objective: >-
     Produce a decision-ready product brief from verified user, market, product,
     and delivery evidence, using prototypes only for material uncertainties.
+    Request: {{objective}}
   blocks:
     - id: problem-evidence
       kind: explore

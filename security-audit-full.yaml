@@ -1,5 +1,10 @@
 # Full read-only reference for a repository, subsystem, or release security audit.
 title: "Security audit (full): threat surface → code and upstream supply chain → verify"
+inputs:
+  objective:
+    description: >-
+      The scope to assess: the repository, subsystem, or release, and the threat
+      context and upstream dependencies that matter.
 config:
   name: security-audit-full
   max_concurrency: 4
@@ -11,6 +16,7 @@ config:
   objective: >-
     Assess the confirmed scope for exploitable code, authorization, secret,
     configuration, and upstream supply-chain risks using safe verified evidence.
+    Request: {{objective}}
   blocks:
     - id: security-scope
       kind: explore
