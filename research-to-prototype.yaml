@@ -2,15 +2,18 @@
 # disposable, runnable prototype. A surveyor composer fans the research out
 # after it has read the request (the angles are decided at run time, not
 # here), an architect turns the survey into one design and names its riskiest
-# assumption, and the prototyper tests that assumption under prototypes/. A
-# verification runs the prototype again from its own how_to_run, and a review
-# attacks the conclusion; the review decision is the report the parent gets.
+# assumption, and the prototyper builds the smallest runnable form of the
+# target that also tests that assumption, under prototypes/. A verification
+# runs the prototype again from its own how_to_run, which must leave the
+# workspace unchanged, and a review attacks the conclusion. A final
+# synthesize reports the review decision to the parent: the strict review
+# gate requires a diff review to feed a required final gate.
 # Start it with
 # run.start { spec_path: "research-to-prototype", inputs: { objective } }:
 # put the question, the idea to prototype, and the constraints in `objective`.
 # The prototype is evidence, never production code; promoting it is a separate
 # decision for the human.
-title: "Research to prototype: survey → architecture → prototype → verification → review"
+title: "Research to prototype: survey → architecture → prototype → verification → review → report"
 inputs:
   objective:
     description: >-
@@ -25,9 +28,10 @@ config:
     worker_config:
       timeout_ms: 1800000
   objective: >-
-    Research the request, choose one architecture, test its riskiest assumption
-    with one disposable prototype that someone else can run again from its
-    how_to_run, then verify and review the result.
+    Research the request, choose one architecture, and build one disposable
+    prototype that shows the minimal usable form of the target and tests the
+    architecture's riskiest assumption, which someone else can run again from
+    its how_to_run, then verify and review the result.
     Request: {{objective}}
   acceptance:
     - id: AC1
@@ -42,12 +46,18 @@ config:
         hypothesis is reported as a refutation.
     - id: AC3
       text: >-
-        how_to_run names the prerequisites and the exact commands, and running
-        them as written from the workspace root reproduces the observation.
+        how_to_run names the prerequisites and the exact commands, running them
+        as written from the workspace root reproduces the observation, and
+        running them leaves every workspace file unchanged (files they write go
+        to a temporary directory).
     - id: AC4
       text: >-
         Every changed file lies under prototypes/, and the reported fingerprint
         matches the workspace.
+    - id: AC5
+      text: >-
+        Running the prototype demonstrates the minimal usable form of what the
+        request asks for, not only a measurement of the assumption.
   blocks:
     - id: survey
       kind: compose
@@ -87,27 +97,35 @@ config:
       depends_on: [architecture]
       required: true
       instruction: >-
-        Build the smallest disposable experiment that tests the
-        riskiest_assumption of the architecture, and nothing else. Before
-        writing code, write down the hypothesis, which restates that
-        assumption, and the success_signal: the observation that would show it
-        holds and the one that would show it fails. Create everything under
-        prototypes/ in one directory of its own and never change product code,
-        tests, configuration, or lockfiles. Run the experiment and record what
-        you observed apart from what you infer; a run that refutes the
-        hypothesis is a result, not an error. Write the directory's README.md
-        and submit the same text as the summary, with these sections.
-        location: the directory. hypothesis and success_signal: as written
-        before the run. observations: what the run printed or did, quoted.
-        how_to_run: a recipe someone who did not build it can follow, not a
-        description of one: the prerequisites (runtime versions, installs,
-        environment variables, ports), then the exact commands in order, each
-        runnable as written from the workspace root and ending on its own (a
-        recipe that starts a server also exercises and stops it), then the
-        output that marks success and the output that marks failure. Run those
-        commands once, exactly as written, before you submit. Submit the files
-        you created and a stable fingerprint of them, and name the command that
-        computes it.
+        Build the smallest disposable prototype that does two things at once:
+        it demonstrates the minimal usable form of what the request asks for,
+        so someone can run it and watch the target work end to end however
+        thin, and its run tests the riskiest_assumption of the architecture.
+        Leave out anything that serves neither. Before writing code, write
+        down the hypothesis, which restates that assumption, and the
+        success_signal: the observation that would show it holds and the one
+        that would show it fails. Create everything under prototypes/ in one
+        directory of its own and never change product code, tests,
+        configuration, or lockfiles. Run the prototype and record what you
+        observed apart from what you infer; a run that refutes the hypothesis
+        is a result, not an error. Write the directory's README.md and submit
+        the same text as the summary, with these sections. location: the
+        directory. hypothesis and success_signal: as written before the run.
+        observations: what the run printed or did, quoted. how_to_run: a
+        recipe someone who did not build it can follow, not a description of
+        one: the prerequisites (runtime versions, installs, environment
+        variables, ports), then the exact commands in order, each runnable as
+        written from the workspace root and ending on its own (a recipe that
+        starts a server also exercises and stops it), then the output that
+        marks success and the output that marks failure. The recipe must leave
+        the workspace exactly as it found it: every file a command writes
+        (outputs, logs, caches, copies of fixtures it would modify) goes to a
+        temporary directory, such as one made with mktemp -d, and is removed
+        when the command ends, so running it twice gives the same result and
+        the verification can run it as written without editing any file. Run
+        those commands once, exactly as written, and confirm the workspace is
+        unchanged before you submit. Submit the files you created and a stable
+        fingerprint of them, and name the command that computes it.
 
     - id: prototype-check
       kind: verify
@@ -123,7 +141,9 @@ config:
         success or failure signal the prototype states. A missing
         prerequisite, a command that needs guessing, a result that contradicts
         the observations, or a changed file outside prototypes/ is FAIL.
-        Compare the reported files and fingerprint with the workspace.
+        Compare the reported files and fingerprint with the workspace before
+        and after the run; a how_to_run that changes any workspace file is
+        FAIL.
 
     - id: prototype-review
       kind: review
@@ -134,10 +154,20 @@ config:
         Attack the conclusion, not the repository, using the verification
         evidence and the files the prototype changed. Check that the prototype
         tests the riskiest_assumption the verification names and not an easier
-        one, that the observation supports the stated result and no other
+        one, that it demonstrates the minimal usable form of what the request
+        asks for, that the observation supports the stated result and no other
         explanation fits as well, that how_to_run is actionable for someone who
         did not build it, and that nothing changed outside prototypes/. A claim
         the evidence does not support, or a result stated more strongly than
         the observation, is a required action. In the decision summary give the
         verdict, the directory under prototypes/, and what the prototype
         showed; its README carries how_to_run.
+
+    - id: prototype-report
+      kind: synthesize
+      depends_on: [prototype-review]
+      instruction: >-
+        Report the review decision to the parent: the verdict, the directory
+        under prototypes/, what the prototype showed, and its how_to_run. Add
+        nothing the verification and review outputs do not support, and do not
+        write files.

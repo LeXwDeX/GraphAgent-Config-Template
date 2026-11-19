@@ -9,13 +9,26 @@ config:
   name: technical-design-lite
   max_concurrency: 2
   max_node_replan_attempts: 2
-  max_total_nodes: 10
+  max_total_nodes: 12
   node_defaults:
     worker_config:
       timeout_ms: 1800000
   objective: >-
     Define the smallest correct interface and implementation plan for a bounded change.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The design specifies the narrow owning interface, behavior, errors,
+        write set, and acceptance seam.
+    - id: AC2
+      text: >-
+        Callers stay free of internal ordering and persistence knowledge, and
+        no new abstraction serves fewer than two callers.
+    - id: AC3
+      text: >-
+        The smallest implementation sequence and the remaining risks are
+        stated.
   blocks:
     - id: design-map
       kind: explore
@@ -27,13 +40,17 @@ config:
     - id: design-lite-gate
       kind: review
       depends_on: [design-map]
+      lenses: [standards, intent, completeness]
       report_to_parent: true
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
         it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
-        route and control changes.
+        route and control changes. Completeness lens: at this gate an acceptance
+        item counts as covered or partial when the evidence names the check or
+        step that will establish it, and as missing only when it has no path to
+        evidence; no item is expected to be delivered yet.
 
     - id: bounded-design
       kind: plan
@@ -46,6 +63,7 @@ config:
     - id: bounded-design-review
       kind: review
       depends_on: [bounded-design]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Check correctness, repository fit, change locality, scope, and whether
         callers remain free of internal ordering and persistence knowledge.

@@ -18,6 +18,21 @@ config:
     Review a pinned change independently for repository standards, confirmed
     intent, correctness, and operational risk, then return one auditable verdict.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The review is bound to the fixed point: a full SHA, HEAD, and the
+        complete diff it judged.
+    - id: AC2
+      text: >-
+        Every finding cites a rule, requirement, or observable failure with
+        file and line evidence and is classed as introduced, pre-existing, or
+        newly exposed; refuted claims are listed.
+    - id: AC3
+      text: >-
+        Every documented check the diff triggers ran with its raw result
+        recorded, and the report states per-axis verdicts and one delivery
+        decision.
   blocks:
     - id: pin-review
       kind: explore
@@ -63,6 +78,7 @@ config:
     - id: whole-change-decision
       kind: review
       depends_on: [standards-evidence, intent-evidence, correctness-evidence, review-gates]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Verify and deduplicate claims without allowing one axis to mask another.
         Classify introduced, pre-existing, newly exposed, spec, and test gaps;

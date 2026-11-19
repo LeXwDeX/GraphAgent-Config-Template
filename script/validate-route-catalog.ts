@@ -1,7 +1,11 @@
 import path from "node:path"
 import fs from "node:fs/promises"
 
+// Usage: bun script/validate-route-catalog.ts [templates-dir] [runtime-dir]
+// With a runtime checkout (the commit pinned by runtime-compat.json) every
+// template is also validated under the authored and the strict review gates.
 const root = path.resolve(process.argv[2] ?? ".")
+const runtimeArg = process.argv[3]
 const domains = [
   "product-planning",
   "technical-design",
@@ -24,7 +28,7 @@ const crossDomainRoutes = [
 ]
 const catalog = [...expected, ...crossDomainRoutes].sort()
 const routeNames = catalog.map((file) => path.basename(file, ".yaml"))
-// The compatible runtime gate (runtime-compat.json, commit b2f5b464) rejects
+// The compatible runtime gate (the commit pinned by runtime-compat.json) rejects
 // any node whose worker_type is outside its builtin agent catalog (build, plan,
 // general, explore, researcher, architect, prototyper, review, auditor, and the
 // composers surveyor and mapper); the portable profile skips the catalog when
@@ -90,6 +94,65 @@ function validateWorkerTypes(
 console.log(
   `Validated ${catalog.length} routes: ${domains.length} full/lite domains plus ${crossDomainRoutes.length} cross-domain routes.`,
 )
+
+if (runtimeArg !== undefined) await validateReviewGates(path.resolve(runtimeArg))
+
+interface AuthoringResult {
+  valid: boolean
+  errors: { code: string; path: string; message: string }[]
+}
+
+// A session with DAG mode on starts every workflow under the strict review
+// gate, so a template has to be valid both as its author declared it (standard
+// unless config.review_gate says otherwise) and under strict. The runtime's own
+// authoring module is the one authority for both gates, so this drives it
+// directly instead of restating its rules here. The strict gate is the
+// `review_gate` start override, which the pinned commit already accepts; the
+// runtime's directory validator runs the authored gate only until it learns
+// the second pass.
+async function validateReviewGates(runtime: string) {
+  const pkg = path.join(runtime, "packages", "graphagent")
+  const authoringPath = path.join(pkg, "src", "dag", "authoring.ts")
+  if (!(await Bun.file(authoringPath).exists()))
+    fail(
+      `${authoringPath} not found: pass a runtime checkout at the commit pinned by runtime-compat.json`,
+    )
+  let effectPath: string
+  try {
+    effectPath = Bun.resolveSync("effect", pkg)
+  } catch {
+    return fail(`runtime dependencies are not installed in ${runtime} (run bun install there)`)
+  }
+  const { Effect } = await import(effectPath)
+  const { WorkflowAuthoring } = await import(authoringPath)
+  const authoring = WorkflowAuthoring.make()
+  let failures = 0
+  for (const filename of catalog) {
+    const content = await Bun.file(path.join(root, filename)).text()
+    for (const gate of ["authored", "strict"] as const) {
+      const result: AuthoringResult = await Effect.runPromise(
+        authoring.prepare({
+          action: "start",
+          source: { kind: "yaml", source: filename, content },
+          profile: "portable",
+          // A template is judged on its own: required inputs stand in as samples.
+          template: { kind: "sample" },
+          ...(gate === "strict" ? { review_gate: "strict" } : {}),
+        }),
+      )
+      if (result.valid) continue
+      failures++
+      for (const diagnostic of result.errors)
+        console.error(
+          `${filename} [${gate}] ${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}`,
+        )
+    }
+  }
+  if (failures > 0) process.exit(1)
+  console.log(
+    `Validated ${catalog.length} templates under the authored and strict review gates.`,
+  )
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)

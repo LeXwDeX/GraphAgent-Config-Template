@@ -1,11 +1,14 @@
 # Cross-domain route (not one of the 7 domain pairs). Start it with
 # run.start { spec_path: "ultra-flow-route", inputs: { objective } }: the request
-# reaches every stage prompt. The parent removes stage-release, in a task copy,
-# when the project has no release mechanics. Checkpoints are direction gates:
-# verdict continue lets the flow run on untouched; verdict replan wakes the
-# parent, which adds correction nodes (findings as input, max 3 back-edges,
-# one decision point after the third). Stage 3 is plan-driven: its plan node
-# returns work packages and the development writer fans out over them.
+# reaches every stage prompt. The parent removes stage-release and
+# cp-after-release, in a task copy, when the project has no release mechanics,
+# and points stage-summary at cp-acceptance-decision. Checkpoints are review
+# blocks: ACCEPT lets the flow run on untouched; any other verdict wakes the
+# parent with findings and the stage to re-enter. Stage 3 is plan-driven: its
+# plan block returns work packages and the development writer fans out over
+# them. The writer is a coding block, so the strict review gate puts one
+# verification and a fingerprint-bound review after it; the direction check
+# that used to precede acceptance is judged by that review's intent lens.
 title: "Ultra flow: exploration → design → development → acceptance → release → summary with checkpoints"
 inputs:
   objective:
@@ -17,351 +20,172 @@ config:
   name: ultra-flow-route
   max_concurrency: 4
   max_node_replan_attempts: 3
-  max_total_nodes: 32
+  max_total_nodes: 40
   node_defaults:
     worker_config:
       timeout_ms: 1800000
-  nodes:
+  objective: >-
+    Carry the request from exploration through design, plan-driven development,
+    and acceptance to an optional release brief and a summary, with a direction
+    checkpoint between the stages.
+    Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The change delivers the behavior described in the request, observable
+        at public seams, and breaks no required repository check.
+    - id: AC2
+      text: >-
+        Every acceptance scenario from the design stage is covered by
+        deterministic evidence bound to the exact implementation fingerprint.
+    - id: AC3
+      text: >-
+        The summary lists the stages executed and skipped with reasons, the CI
+        status, the release outcome, and any gate waiting on the human.
+  blocks:
     - id: stage-exploration
-      name: "stage 1: product exploration"
-      worker_type: explore
-      depends_on: []
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Explore the product side of this request. Establish
-          the user, the job, current workarounds, pain, frequency, stakes, and
-          the desired outcome. Separate observed facts from assumptions. Grill
-          every materially ambiguous point into a sharp answer with an
-          auto-formed recommendation, and end with one sharpened brief plus the
-          decisions that remain user-owned.
+      kind: explore
+      instruction: >-
+        Stage 1: product exploration. Explore the product side of this request.
+        Establish the user, the job, current workarounds, pain, frequency,
+        stakes, and the desired outcome. Separate observed facts from
+        assumptions. Grill every materially ambiguous point into a sharp answer
+        with an auto-formed recommendation, and end with one sharpened brief
+        plus the decisions that remain user-owned.
 
     - id: cp-after-exploration
-      name: "checkpoint: exploration → design direction"
-      worker_type: general
+      kind: review
       depends_on: [stage-exploration]
-      report_to_parent: true
-      required: true
-      worker_config:
-        timeout_ms: 600000
-      output_schema:
-        type: object
-        properties:
-          verdict:
-            type: string
-            enum: [continue, replan]
-          findings:
-            type: string
-          target:
-            type: string
-        required: [verdict, findings]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Direction checkpoint for this request. Read the exploration
-          output above. Judge ONLY whether the direction is correct and whether
-          a replan is needed before design begins. Verdict continue when the
-          brief supports proceeding; replan with findings and the stage to
-          re-enter as target otherwise. Submit exactly the schema.
+      lenses: [intent, completeness]
+      instruction: >-
+        Direction checkpoint for this request. Read the exploration output.
+        Judge ONLY whether the direction is correct and whether a replan is
+        needed before design begins. Return ACCEPT when the brief supports
+        proceeding; otherwise return REJECT with findings and, as a required
+        action, the stage to re-enter. Completeness lens: at this checkpoint an
+        acceptance item counts as covered or partial when the evidence so far
+        names the step that will establish it, and as missing only when it has
+        no path to evidence.
 
     - id: stage-design
-      name: "stage 2: project design (spec + how)"
-      worker_type: plan
+      kind: plan
       depends_on: [cp-after-exploration]
-      condition: cp-after-exploration.output.verdict == "continue"
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Design stage for this request. WHAT: define the behavior contract —
-          observable behavior, acceptance scenarios, capability scope, suitable
-          as the body of exactly one platform issue (the issue IS the atom; no
-          X.Y task fragmentation). HOW: record a design decision only when the
-          change is cross-cutting, risky, or ambiguous, with alternatives
-          considered. Return the spec text, the design decision (or why none is
-          needed), and any user-owned decision that surfaced.
-
-    - id: cp-design-standards
-      name: "checkpoint: design quality evidence"
-      worker_type: explore
-      depends_on: [stage-design]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Independently assess the design stage output for this request:
-          completeness, testability, ambiguity, and repository convention fit.
-          Cite each finding precisely and separate hard defects from judgement
-          calls.
-
-    - id: cp-design-intent
-      name: "checkpoint: design alignment evidence"
-      worker_type: explore
-      depends_on: [stage-design]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Independently compare the design stage output with the original
-          request. Identify missing intent, scope creep, and
-          requirements that look covered but are misread.
+      instruction: >-
+        Stage 2: project design (spec + how). WHAT: define the behavior
+        contract — observable behavior, acceptance scenarios, capability scope,
+        suitable as the body of exactly one platform issue (the issue IS the
+        atom; no X.Y task fragmentation). HOW: record a design decision only
+        when the change is cross-cutting, risky, or ambiguous, with
+        alternatives considered. Return the spec text, the design decision (or
+        why none is needed), and any user-owned decision that surfaced.
 
     - id: cp-design-decision
-      name: "checkpoint: design → development decision"
-      worker_type: general
-      depends_on: [cp-design-standards, cp-design-intent]
-      report_to_parent: true
-      required: true
-      worker_config:
-        timeout_ms: 600000
-      output_schema:
-        type: object
-        properties:
-          verdict:
-            type: string
-            enum: [continue, replan]
-          findings:
-            type: string
-          target:
-            type: string
-        required: [verdict, findings]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Weighted design gate. Read both evidence nodes above and the design
-          output. Decide whether development may start for this request.
-          Verdict continue only when the design is faithful to intent and free
-          of hard defects; otherwise replan with findings and target stage.
-          Submit exactly the schema.
+      kind: review
+      depends_on: [stage-design]
+      lenses: [standards, intent, completeness]
+      instruction: >-
+        Weighted design gate for this request, judged on independent axes.
+        Standards: completeness, testability, ambiguity, and repository
+        convention fit of the design stage output; cite each finding precisely
+        and separate hard defects from judgement calls. Intent: compare the
+        design stage output with the original request; identify missing intent,
+        scope creep, and requirements that look covered but are misread. Decide
+        whether development may start: return ACCEPT only when the design is
+        faithful to intent and free of hard defects; otherwise return REJECT
+        with findings and, as a required action, the stage to re-enter.
+        Completeness lens: at this checkpoint an acceptance item counts as
+        covered or partial when the evidence so far names the step that will
+        establish it, and as missing only when it has no path to evidence.
 
     - id: stage-development-plan
-      name: "stage 3a: development work packages"
-      worker_type: plan
+      kind: plan
       depends_on: [cp-design-decision]
-      condition: cp-design-decision.output.verdict == "continue"
-      output_schema:
-        type: object
-        properties:
-          summary:
-            type: string
-          packages:
-            type: array
-            items:
-              type: object
-              properties:
-                id:
-                  type: string
-                instruction:
-                  type: string
-                write_set:
-                  type: array
-                  items:
-                    type: string
-              required: [id, instruction, write_set]
-        required: [summary, packages]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Development planning for this request. From the confirmed
-          design, split the implementation into work packages; each package
-          becomes one writer running concurrently in the same workspace. Split
-          only where the work is genuinely independent and return a single
-          package when it is not. Give each package a short id (letters,
-          numbers, hyphens, underscores), a self-contained instruction, and its
-          write_set of repository-relative files or directories. Write sets
-          must be triple-disjoint: source files, generated artifacts, and
-          lockfiles never overlap, and no package may trigger a shared build.
-          Keep generated-artifact or delivery wiring in its own package. Do not
-          implement.
+      instruction: >-
+        Stage 3a: development work packages. From the confirmed design, split
+        the implementation into work packages; each package becomes one writer
+        running concurrently in the same workspace. Split only where the work
+        is genuinely independent and return a single package when it is not.
+        Give each package a short id (letters, numbers, hyphens, underscores),
+        a self-contained instruction, and its write_set of repository-relative
+        files or directories. Write sets must be triple-disjoint: source files,
+        generated artifacts, and lockfiles never overlap, and no package may
+        trigger a shared build. Keep generated-artifact or delivery wiring in
+        its own package. Do not implement.
 
     - id: stage-development
-      name: "stage 3b: project development"
-      worker_type: build
+      kind: coding
       depends_on: [stage-development-plan]
       fan_out: stage-development-plan
-      output_schema:
-        type: object
-        properties:
-          summary:
-            type: string
-          changed_files:
-            type: array
-            items:
-              type: string
-          fingerprint:
-            type: string
-        required: [summary, changed_files, fingerprint]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Development stage for this request. Implement only the
-          assigned work package and its write set: a failing behavior check at
-          the public seam before the smallest change that passes it, and
-          focused repository checks. Stop on ownership or interface drift and
-          report it. Submit the changed-file list and a stable fingerprint of
-          the actual implementation state.
-
-    - id: cp-after-development
-      name: "checkpoint: development → acceptance direction"
-      worker_type: general
-      depends_on: [stage-development]
-      report_to_parent: true
-      required: true
-      worker_config:
-        timeout_ms: 600000
-      output_schema:
-        type: object
-        properties:
-          verdict:
-            type: string
-            enum: [continue, replan]
-          findings:
-            type: string
-          target:
-            type: string
-        required: [verdict, findings]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Direction checkpoint for this request. Read the development
-          output above. Judge whether the implemented direction still matches
-          the design and the request, and whether acceptance testing may start.
-          Verdict continue or replan with findings and target. Submit exactly
-          the schema.
+      instruction: >-
+        Stage 3b: project development. Implement only the assigned work package
+        and its write set: a failing behavior check at the public seam before
+        the smallest change that passes it, and focused repository checks. Stop
+        on ownership or interface drift and report it. Submit the changed-file
+        list and a stable fingerprint of the actual implementation state.
 
     - id: stage-acceptance
-      name: "stage 4: test and acceptance evidence"
-      worker_type: general
-      depends_on: [cp-after-development]
-      condition: cp-after-development.output.verdict == "continue"
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Test and acceptance stage for this request. Run the documented gates
-          for every affected package and gather acceptance evidence: behavior
-          checks at public seams, CI check status from the platform, and the
-          difference between claimed and observed behavior. Bind every result
-          to the exact HEAD fingerprint and report gaps verbatim.
-
-    - id: cp-acceptance-standards
-      name: "checkpoint: acceptance standards evidence"
-      worker_type: explore
-      depends_on: [stage-acceptance]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Independently assess the acceptance evidence for this request
-          against repository standards and required gates: completeness of the
-          gate set, validity of the fingerprint binding, and any stale or
-          missing evidence.
-
-    - id: cp-acceptance-intent
-      name: "checkpoint: acceptance alignment evidence"
-      worker_type: explore
-      depends_on: [stage-acceptance]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Independently compare the acceptance evidence with the original
-          request and the design-stage acceptance scenarios.
-          Identify untested scenarios, weakened assertions, and behavior that
-          was never asked for.
+      kind: verify
+      depends_on: [stage-development]
+      instruction: >-
+        Stage 4: test and acceptance evidence. Run the documented gates for
+        every affected package and gather acceptance evidence: behavior checks
+        at public seams, CI check status from the platform, and the difference
+        between claimed and observed behavior. Bind every result to the exact
+        HEAD fingerprint and report gaps verbatim.
 
     - id: cp-acceptance-decision
-      name: "checkpoint: acceptance → release decision"
-      worker_type: general
-      depends_on: [cp-acceptance-standards, cp-acceptance-intent]
-      report_to_parent: true
-      required: true
-      worker_config:
-        timeout_ms: 600000
-      output_schema:
-        type: object
-        properties:
-          verdict:
-            type: string
-            enum: [continue, replan]
-          findings:
-            type: string
-          target:
-            type: string
-        required: [verdict, findings]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Weighted acceptance gate for this request. Read both evidence nodes
-          above. Verdict continue only when CI is green, the review evidence
-          supports delivery, and acceptance scenarios are genuinely covered;
-          otherwise replan with findings and the stage to re-enter. Submit
-          exactly the schema.
+      kind: review
+      depends_on: [stage-acceptance]
+      lenses: [standards, intent, completeness]
+      instruction: >-
+        Weighted acceptance gate for this request, judged on independent axes.
+        Standards: assess the acceptance evidence against repository standards
+        and required gates: completeness of the gate set, validity of the
+        fingerprint binding, and any stale or missing evidence. Intent: compare
+        the implemented direction and the acceptance evidence with the original
+        request, the design, and the design-stage acceptance scenarios; judge
+        whether the implementation still matches the design, and identify
+        untested scenarios, weakened assertions, and behavior that was never
+        asked for. Return ACCEPT only when CI is green, the review evidence
+        supports delivery, and acceptance scenarios are genuinely covered;
+        otherwise return REJECT with findings and, as a required action, the
+        stage to re-enter.
 
     - id: stage-release
-      name: "stage 5: build and release (optional)"
-      worker_type: general
+      kind: synthesize
       depends_on: [cp-acceptance-decision]
-      condition: cp-acceptance-decision.output.verdict == "continue"
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
+      report_to_parent: false
+      instruction: >-
+        Stage 5: build and release (optional). Probe the repository's release
+        mechanics (release workflow vs platform release creation), the latest
+        tag, and the commits landed by this plan, using read-only commands.
+        Derive the candidate version from tag plus commit types (feat → minor,
+        fix → patch, breaking → major) and draft the changelog. Do NOT publish:
+        submit the release brief (mechanism, version, changelog, rollback) for
+        the human gate.
 
-          Release stage for this request. Probe the repository's release
-          mechanics (release workflow vs platform release creation), the latest
-          tag, and the commits landed by this plan. Derive the candidate
-          version from tag plus commit types (feat → minor, fix → patch,
-          breaking → major) and draft the changelog. Do NOT publish: submit the
-          release brief (mechanism, version, changelog, rollback) for the
-          human gate.
-
+    # A review after the writer binds to the verification directly, so it names
+    # stage-acceptance next to the stage it judges.
     - id: cp-after-release
-      name: "checkpoint: release → summary direction"
-      worker_type: general
-      depends_on: [stage-release]
-      report_to_parent: true
-      required: true
-      worker_config:
-        timeout_ms: 600000
-      output_schema:
-        type: object
-        properties:
-          verdict:
-            type: string
-            enum: [continue, replan]
-          findings:
-            type: string
-          target:
-            type: string
-        required: [verdict, findings]
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Direction checkpoint for this request. Read the release stage
-          output. Verdict continue when the release outcome (or its documented
-          skip) is consistent with the plan; replan with findings and target
-          otherwise. Submit exactly the schema.
+      kind: review
+      depends_on: [stage-release, stage-acceptance]
+      lenses: [intent, completeness]
+      instruction: >-
+        Direction checkpoint for this request. Read the release stage output.
+        Return ACCEPT when the release outcome (or its documented skip) is
+        consistent with the plan and the accepted implementation; otherwise
+        return REJECT with findings and, as a required action, the stage to
+        re-enter. Completeness lens: the acceptance decision already judged
+        delivery, so confirm only that every acceptance item stays covered by
+        the accepted evidence.
 
     - id: stage-summary
-      name: "stage 6: summary"
-      worker_type: general
+      kind: synthesize
       depends_on: [cp-after-release]
-      condition: cp-after-release.output.verdict == "continue"
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Consolidated report for this request: stages executed including
-          skips with reasons, issue numbers, PR URLs, CI status, replan passes
-          used, merge position in the plan, release outcome, and any gate
-          waiting on the human. Write the complete report to a non-empty
-          markdown file under the project .opencode/workflow-reports/
-          directory, then submit ONLY that absolute file path as your output.
+      instruction: >-
+        Stage 6: summary. Consolidated report for this request: stages executed
+        including skips with reasons, issue numbers, PR URLs, CI status, replan
+        passes used, merge position in the plan, release outcome, and any gate
+        waiting on the human. Write the complete report to a non-empty markdown
+        file under the project .opencode/workflow-reports/ directory, then
+        submit ONLY that absolute file path as your output.

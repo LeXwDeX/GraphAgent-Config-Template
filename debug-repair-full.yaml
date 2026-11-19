@@ -17,6 +17,20 @@ config:
     Reproduce the exact defect, prove one root cause, implement the narrowest
     repair, and lock the behavior with a sensitive regression check.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The exact reported symptom is reproduced by a deterministic feedback
+        loop, and the repaired code makes that loop pass.
+    - id: AC2
+      text: >-
+        The root cause is proven with evidence rather than inferred from the
+        symptom, and the repair stays at the causal seam.
+    - id: AC3
+      text: >-
+        A regression check fails without the repair and passes with it, the
+        affected package gates pass, and no instrumentation or throwaway
+        artifact remains.
   blocks:
     - id: reproduce-defect
       kind: debug
@@ -52,6 +66,7 @@ config:
     - id: review-repair
       kind: review
       depends_on: [verify-repair]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Check that the change addresses the proven cause, the test observes real
         behavior, no assertion or error was weakened, and no broader behavior or

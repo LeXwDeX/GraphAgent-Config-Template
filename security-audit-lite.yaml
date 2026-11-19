@@ -9,13 +9,26 @@ config:
   name: security-audit-lite
   max_concurrency: 2
   max_node_replan_attempts: 2
-  max_total_nodes: 12
+  max_total_nodes: 14
   node_defaults:
     worker_config:
       timeout_ms: 1800000
   objective: >-
     Check a bounded scope for reachable security regressions and upstream supply-chain risk.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        Every blocking finding carries reachability or affected-version
+        evidence; a tool alert without it does not block.
+    - id: AC2
+      text: >-
+        Any changed upstream states its exact locked version or SHA, origin,
+        checksum or provenance, advisory status, and fixed version.
+    - id: AC3
+      text: >-
+        Secrets appear only as redacted class and location, and the report
+        gives a verdict and the residual risk.
   blocks:
     - id: lite-security-scope
       kind: explore
@@ -28,13 +41,17 @@ config:
     - id: lite-security-gate
       kind: review
       depends_on: [lite-security-scope]
+      lenses: [standards, intent, completeness]
       report_to_parent: true
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
         it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
-        route and control changes.
+        route and control changes. Completeness lens: at this gate an acceptance
+        item counts as covered or partial when the evidence names the check or
+        step that will establish it, and as missing only when it has no path to
+        evidence; no item is expected to be delivered yet.
 
     - id: lite-security-checks
       kind: verify
@@ -48,6 +65,7 @@ config:
     - id: lite-security-decision
       kind: review
       depends_on: [lite-security-checks]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Separate verified vulnerabilities, upstream supply-chain blockers,
         insecure configuration, hardening, false positives, and unknowns. A tool

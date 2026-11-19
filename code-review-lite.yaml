@@ -9,13 +9,26 @@ config:
   name: code-review-lite
   max_concurrency: 2
   max_node_replan_attempts: 2
-  max_total_nodes: 10
+  max_total_nodes: 12
   node_defaults:
     worker_config:
       timeout_ms: 1800000
   objective: >-
     Review one bounded diff against its intent, repository rules, and required checks.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The review is bound to the fixed point and HEAD and covers the
+        complete diff.
+    - id: AC2
+      text: >-
+        Every blocker cites a rule, requirement, or observable failure;
+        optional hardening and pre-existing debt are listed apart.
+    - id: AC3
+      text: >-
+        The focused tests and every documented gate the diff triggers ran with
+        exact results, and the report states the merge decision.
   blocks:
     - id: lite-review-scope
       kind: explore
@@ -27,13 +40,17 @@ config:
     - id: lite-review-gate
       kind: review
       depends_on: [lite-review-scope]
+      lenses: [standards, intent, completeness]
       report_to_parent: true
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
         it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
-        route and control changes.
+        route and control changes. Completeness lens: at this gate an acceptance
+        item counts as covered or partial when the evidence names the check or
+        step that will establish it, and as missing only when it has no path to
+        evidence; no item is expected to be delivered yet.
 
     - id: lite-review-gates
       kind: verify
@@ -45,6 +62,7 @@ config:
     - id: lite-review-decision
       kind: review
       depends_on: [lite-review-gates]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Review Standards and Intent separately, then check correctness and test
         sensitivity. Cite each blocker to a rule, requirement, or observable

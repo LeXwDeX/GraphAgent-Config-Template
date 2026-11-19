@@ -26,9 +26,9 @@ opencode DAG 编排的参考模板配置仓库（唯一权威源）。
 
 | 路线                  | 用途                                                                         |
 | --------------------- | ---------------------------------------------------------------------------- |
-| `ultra-flow-route.yaml` | 六积木（探索 → 设计 → 开发（计划驱动并行切片） → 验收 → 发布 → 汇总）+ 五道分级检查点（轻量方向判定 ×3、独立取证三件套 ×2）。检查点 verdict 为 `continue`/`replan`：continue 不扰流程，replan 唤醒父会话做 additive 重规划（findings 注入、回环 ≤3）。发布积木可由父对话在重定向时删除 |
-| `release-route.yaml`    | 发布装配：机制探测 → 版本推导（latest tag + commit 类型）→ 人工门（默认 hold，父会话注入确认后才 publish）→ 发布执行 → 验证 |
-| `research-to-prototype.yaml` | 调研到原型：`compose` 积木（`surveyor`）按目标展开只读调研，角度在运行时才定 → `architect` 收敛为一个架构并点出最危险的假设 → `prototyper` 只在 `prototypes/` 下做一次一次性实验 → 验证按其 `how_to_run` 原样重跑 → 审查攻击结论，评审决定即交给父会话的报告 |
+| `ultra-flow-route.yaml` | 六积木（探索 → 设计 → 开发（计划驱动并行切片） → 验收 → 发布 → 汇总）+ 四道 `review` 积木检查点（探索后与发布后的方向判定、设计与验收的取证三件套）。ACCEPT 不扰流程，其他 verdict 唤醒父会话，附 findings 和要回到的阶段。开发后的方向判定并入验收决策的 intent 视角（写者之后必须先 verify 再 review）。发布积木（`stage-release`、`cp-after-release`）可由父对话在重定向时一并删除，并把 `stage-summary` 改为依赖 `cp-acceptance-decision` |
+| `release-route.yaml`    | 发布装配：机制探测 → 版本推导（latest tag + commit 类型）→ 人工门（`review` 积木，默认 hold，父会话注入确认后才 ACCEPT）→ 发布执行（`coding` 积木，指纹为 release tag 指向的提交）→ 验证 → 复核 → 报告 |
+| `research-to-prototype.yaml` | 调研到原型：`compose` 积木（`surveyor`）按目标展开只读调研，角度在运行时才定 → `architect` 收敛为一个架构并点出最危险的假设 → `prototyper` 在 `prototypes/` 下做一个一次性原型，既演示目标的最小可用形态，又验证那条假设，`how_to_run` 对工作区无副作用（写文件只写到临时目录）→ 验证按其 `how_to_run` 原样重跑 → 审查攻击结论 → `synthesize` 把评审决定作为最终报告交给父会话 |
 
 ## 积木式路线
 
@@ -43,7 +43,8 @@ opencode DAG 编排的参考模板配置仓库（唯一权威源）。
 review 绑定不变。只有一个包时按原样运行；写集重叠等无法证明安全的形态会退回
 串行并在 prompt 中说明原因。`project-development-full` 与 `ultra-flow-route`
 的开发阶段采用这一机制（运行时 1.0.84 起）。需要自定义绑定、条件、输出 Schema 或深度 diff
-审查元数据时，现有 `nodes` 模板仍是低层逃生口。
+审查元数据时，现有 `nodes` 模板仍是低层逃生口（strict 下它不得含可写 worker，
+见“评审闸门”）。
 
 每个积木都由运行时生命周期契约和本仓库的专项 `instruction` 共同定义，
 不读取或依赖用户环境中的 Skill。`kind` 控制编译与门禁，`id` 表达具体产品
@@ -69,6 +70,26 @@ review 绑定不变。只有一个包时按原样运行；写集重叠等无法�
 `{{objective}}` 换成具体目标。带 `inputs` 的文档总会被实例化，缺少必填输入会
 报错；没有 `inputs` 的文档收到 `inputs` 同样报错。新增模板也要声明并引用
 `objective`，运行时的模板 CI 会对缺少 `inputs` 的模板告警。
+
+## 评审闸门（strict）
+
+会话开启 DAG 模式后，运行时用 strict 评审闸门启动所有工作流，与规格来源和
+规格自己声明的闸门无关。所以本仓每个模板必须同时在作者声明的闸门（未声明即
+standard）和 strict 下合法，CI 对每个模板各校验一次：`script/validate-route-catalog.ts`
+用 `runtime-compat.json` 钉住的运行时提交的 authoring 模块，按两个闸门分别
+校验。新增或修改模板时照下面写：
+
+- 每个 `review` 积木的 `lenses` 含 `completeness`：默认的 `[standards, intent]`
+  不够，写成 `[standards, intent, completeness]`。交付物还不存在的 gate 和中途
+  review，要在 `instruction` 里写明 completeness 视角只判断“有没有取得证据的
+  路径”，否则它会把尚未交付的验收项都判为 missing。
+- 声明 `config.acceptance`（1–50 条，`id` 唯一；有写者时必填），为每个
+  review 的 completeness 视角提供可判断的条目。
+- 写者只能是 `coding` 或 `prototype` 积木；其后接一个 `verify`，再接绑定实现
+  指纹的 `review`，再接一个直接依赖该 `review` 的 `synthesize` 作为必需的最终
+  闸门。写者之后的每个 `review` 都要在 `depends_on` 里直接列出那个 `verify`。
+- `nodes` 形式的模板不得含可写 worker（`general`、`build` 等），所以带写者的
+  路线一律用 `blocks`；`nodes` 只适合纯只读的拓扑。
 
 ## 路由权威
 
@@ -133,3 +154,6 @@ git -C ~/.config/opencode/workflows pull
 - 主仓库 `.opencode/workflows/` 不再维护模板文件，本仓库是唯一权威源。
 - **`runtime-compat.json` 钉住配套主仓库运行时 SHA**：模板用到的能力必须先在运行时落地并发版，再把此处 bump 到对应合并 SHA；CI 模板校验会依据该契约把关。
 - **模板目录受 CI 严格校验**（`script/validate-route-catalog.ts`）：必须恰好为 7 域 × full/lite + 已声明的跨域路线。新增、删除或改名模板时必须同步修改校验脚本与测试 fixture，否则 CI 拒绝合并。
+- **每个模板按两个评审闸门各校验一次**：`bun script/validate-route-catalog.ts . <运行时检出目录>`
+  在作者声明的闸门和 strict 下分别校验全部模板；`GRAPHAGENT_RUNTIME=<运行时检出目录> bun test script/validate-route-catalog.test.ts`
+  运行对应的回归测试（不设该变量时这些测试跳过）。运行时目录需已 `bun install`。
