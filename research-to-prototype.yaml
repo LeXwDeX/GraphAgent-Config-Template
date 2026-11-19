@@ -121,7 +121,9 @@ config:
         no file anywhere, not even a temporary one: workflow nodes may not
         write outside the project, and the verification runs read-only, so a
         command that creates, changes, or removes any file cannot be run
-        there. Feed fixtures through stdin, a heredoc, or arguments, keep
+        there. Read fixtures from files the prototype ships in its directory,
+        from arguments, or from a pipe such as printf '...' | (not a heredoc
+        or here-string: shells back those with temporary files), keep
         intermediate data in pipes or memory, and print results to stdout or
         stderr; prerequisites must already hold, so the recipe installs and
         builds nothing. Running it twice then gives the same result. Run those
