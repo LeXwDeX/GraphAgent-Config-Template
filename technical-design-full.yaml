@@ -20,18 +20,17 @@ config:
   acceptance:
     - id: AC1
       text: >-
-        The design names one owning interface with its invariants, state
-        model, data flow, and error behavior, and compares at least two
-        interfaces with the rejected options and their reasons.
+        The selected design names one owning interface and defines its data
+        flow, errors, and lifecycle, and the options compare at least two
+        interfaces with the rejected ones and their reasons.
     - id: AC2
       text: >-
         The riskiest design assumption is tested by a reversible prototype or
         named as an open risk, with its prediction stated first.
     - id: AC3
       text: >-
-        Migration, rollout, work packages with write sets, and the test plan
-        are specified, and every decision that belongs to the user is listed
-        as a decision.
+        The selected design specifies migration and test seams, and names the
+        unresolved risks and every decision that belongs to the user.
   blocks:
     - id: existing-system
       kind: explore

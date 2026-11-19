@@ -19,16 +19,16 @@ config:
   acceptance:
     - id: AC1
       text: >-
-        Every blocking finding carries reachability or affected-version
-        evidence; a tool alert without it does not block.
+        The checks trace each reported issue from its source to a reachable
+        sink, and each upstream finding names the affected version and its
+        fixed version.
     - id: AC2
       text: >-
         Any changed upstream states its exact locked version or SHA, origin,
         checksum or provenance, advisory status, and fixed version.
     - id: AC3
       text: >-
-        Secrets appear only as redacted class and location, and the report
-        gives a verdict and the residual risk.
+        Secrets appear only as redacted class and location in the evidence.
   blocks:
     - id: lite-security-scope
       kind: explore

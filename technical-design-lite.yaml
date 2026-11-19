@@ -27,8 +27,8 @@ config:
         no new abstraction serves fewer than two callers.
     - id: AC3
       text: >-
-        The smallest implementation sequence and the remaining risks are
-        stated.
+        The design states the smallest implementation sequence that delivers
+        the interface.
   blocks:
     - id: design-map
       kind: explore

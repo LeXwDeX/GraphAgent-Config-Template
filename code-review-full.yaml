@@ -21,18 +21,17 @@ config:
   acceptance:
     - id: AC1
       text: >-
-        The review is bound to the fixed point: a full SHA, HEAD, and the
-        complete diff it judged.
+        The evidence is bound to the fixed point: a full SHA, HEAD, and the
+        complete diff.
     - id: AC2
       text: >-
-        Every finding cites a rule, requirement, or observable failure with
-        file and line evidence and is classed as introduced, pre-existing, or
-        newly exposed; refuted claims are listed.
+        Every finding the evidence blocks raise cites a rule, requirement, or
+        observable failure and the file, line, or runtime evidence that shows
+        it.
     - id: AC3
       text: >-
-        Every documented check the diff triggers ran with its raw result
-        recorded, and the report states per-axis verdicts and one delivery
-        decision.
+        Every documented check the diff triggers ran, with its exact command
+        and raw result recorded.
   blocks:
     - id: pin-review
       kind: explore

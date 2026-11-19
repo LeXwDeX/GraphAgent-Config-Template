@@ -24,13 +24,14 @@ config:
         command) exists before any bottleneck is claimed.
     - id: AC2
       text: >-
-        Every reported bottleneck is verified by a controlled measurement with
-        raw artifacts and variance; claims that do not reproduce are listed as
-        refuted.
+        Every bottleneck claim from the analysis was measured in a controlled
+        benchmark or profile with raw artifacts and variance; claims that do
+        not reproduce are recorded as refuted.
     - id: AC3
       text: >-
-        Findings are ranked by measured user impact with an expected gain, a
-        regression benchmark seam, and the residual scale limits.
+        The benchmark or profile behind each verified bottleneck can be rerun
+        as a regression check: its command, inputs, and environment are
+        recorded.
   blocks:
     - id: performance-baseline
       kind: explore

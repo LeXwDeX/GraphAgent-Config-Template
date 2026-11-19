@@ -19,16 +19,17 @@ config:
   acceptance:
     - id: AC1
       text: >-
-        The review is bound to the fixed point and HEAD and covers the
+        The scope evidence is bound to the fixed point and HEAD and covers the
         complete diff.
     - id: AC2
       text: >-
-        Every blocker cites a rule, requirement, or observable failure;
-        optional hardening and pre-existing debt are listed apart.
+        The scope evidence records the cross-module, release, migration, and
+        high-risk boundaries the diff touches.
     - id: AC3
       text: >-
-        The focused tests and every documented gate the diff triggers ran with
-        exact results, and the report states the merge decision.
+        The focused tests and every documented gate the diff triggers ran,
+        with their exact commands and raw results recorded; a failing check is
+        recorded, not fixed.
   blocks:
     - id: lite-review-scope
       kind: explore

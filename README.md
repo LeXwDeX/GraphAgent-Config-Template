@@ -85,6 +85,12 @@ standard）和 strict 下合法，CI 对每个模板各校验一次：`script/va
   路径”，否则它会把尚未交付的验收项都判为 missing。
 - 声明 `config.acceptance`（1–50 条，`id` 唯一；有写者时必填），为每个
   review 的 completeness 视角提供可判断的条目。
+- `config.acceptance` 的条目只写评审之前就能取得的证据：实现、验证输出和上游
+  证据块的产出。最终报告、summary、release notes 这类评审之后才由 `synthesize`
+  产出的交付物，以及评审自己的结论（verdict、排序、分类），不写进 acceptance，
+  它们的内容由对应块的 `instruction` 约束；否则 completeness 视角只能判它
+  missing，ACCEPT 通不过，最终闸门跑不到。校验脚本会拒绝提到 `synthesize`
+  交付物名称（块 id 的最后一个词，如 `report`、`summary`）的条目。
 - 写者只能是 `coding` 或 `prototype` 积木；其后接一个 `verify`，再接绑定实现
   指纹的 `review`，再接一个直接依赖该 `review` 的 `synthesize` 作为必需的最终
   闸门。写者之后的每个 `review` 都要在 `depends_on` 里直接列出那个 `verify`。

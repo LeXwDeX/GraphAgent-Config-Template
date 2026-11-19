@@ -129,6 +129,31 @@ describe("route catalog guardrails", () => {
     )
   })
 
+  test("rejects an acceptance item that names a deliverable produced after the reviews", async () => {
+    await rewrite(
+      "project-development-full.yaml",
+      /(- id: AC3\n      text: >-\n)(?: {8}.*\n)+/,
+      "$1        The final report states the changed modules and review verdicts.\n",
+    )
+
+    const result = await validate()
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('acceptance AC3 names "report"')
+    expect(result.stderr).toContain("runs after the reviews")
+  })
+
+  test("takes the deliverable word from the synthesize block id", async () => {
+    await rewrite(
+      "product-planning-full.yaml",
+      /(- id: AC1\n      text: >-\n)(?: {8}.*\n)+/,
+      "$1        The brief names the user and the problem.\n",
+    )
+
+    const result = await validate()
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr).toContain('acceptance AC1 names "brief"')
+  })
+
   test("rejects a compose block whose composer is outside the compatible runtime agent catalog", async () => {
     await rewrite(
       "research-to-prototype.yaml",

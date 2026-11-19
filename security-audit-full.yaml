@@ -30,9 +30,9 @@ config:
         check, and false positives are listed as refuted.
     - id: AC3
       text: >-
-        The upstream inventory states its provenance gaps, secrets appear only
-        as redacted class and location, and the report gives PASS, FAIL, or
-        BLOCKED.
+        The upstream evidence covers provenance (origin, signatures,
+        checksums) for every relevant upstream and names what it could not
+        establish, and secrets appear only as redacted class and location.
   blocks:
     - id: security-scope
       kind: explore

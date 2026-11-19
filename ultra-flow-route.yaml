@@ -40,8 +40,8 @@ config:
         deterministic evidence bound to the exact implementation fingerprint.
     - id: AC3
       text: >-
-        The summary lists the stages executed and skipped with reasons, the CI
-        status, the release outcome, and any gate waiting on the human.
+        The CI status the platform reports for the change is recorded, and any
+        red or missing check is named.
   blocks:
     - id: stage-exploration
       kind: explore

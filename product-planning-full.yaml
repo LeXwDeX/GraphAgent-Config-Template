@@ -25,14 +25,15 @@ config:
         and user-owned decisions are listed apart from facts.
     - id: AC2
       text: >-
-        The recommendation compares materially different options, including
-        the smallest viable option and deferral, and each option names the
-        assumption that most threatens it.
+        The options are materially different, include the smallest viable
+        option and deferral, and each names the assumption that most threatens
+        it.
     - id: AC3
       text: >-
         Any prototype states its prediction before the run and reports its
-        result as evidence, and the brief states scope, non-goals, acceptance
-        criteria, measurement, and rollout.
+        result as evidence, and the validation checks the option against the
+        confirmed problem, constraints, success measures, rollback, and
+        non-goals.
   blocks:
     - id: problem-evidence
       kind: explore

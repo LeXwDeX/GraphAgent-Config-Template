@@ -26,12 +26,12 @@ config:
     - id: AC2
       text: >-
         Every documented gate the change triggers ran against the exact
-        implementation fingerprint and passed, or the report names the gate
-        that did not run.
+        implementation fingerprint and passed, or the verification names the
+        gate that did not run.
     - id: AC3
       text: >-
-        The final report states the changed modules, review verdicts, rollout,
-        rollback, and deliberately deferred work.
+        Generated outputs, migrations, and contracts that the change triggers
+        are updated together with it.
   blocks:
     - id: development-map
       kind: explore

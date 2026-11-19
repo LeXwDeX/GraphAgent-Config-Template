@@ -23,11 +23,12 @@ config:
         environment, metric, threshold, and command.
     - id: AC2
       text: >-
-        The report separates a verified bottleneck from measurement noise, a
-        scale limit, and an unsupported idea, with the raw measurements.
+        The measurement records raw values and variance, so a bottleneck can
+        be told apart from noise and from a scale limit.
     - id: AC3
       text: >-
-        The smallest next fix and a regression benchmark are named.
+        The measurement identifies the implementation path that explains the
+        cost, or records that none was found.
   blocks:
     - id: lite-performance-baseline
       kind: explore

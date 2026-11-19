@@ -71,6 +71,7 @@ for (const filename of catalog) {
     fail(`${filename} config.name must equal ${name}`)
   if (name.endsWith("-lite")) validateLiteRoute(filename, parsed.config)
   validateWorkerTypes(filename, parsed.config)
+  validateAcceptanceEvidence(filename, parsed.config)
 }
 
 function validateWorkerTypes(
@@ -88,6 +89,37 @@ function validateWorkerTypes(
     fail(
       `${filename} node ${worker.id} worker type "${workerType}" is not in the compatible runtime agent catalog (${compatibleWorkerTypes.join(", ")})`,
     )
+  }
+}
+
+// A review judges every config.acceptance item from evidence that exists before
+// it runs, but a synthesize block runs after the reviews. An item that names a
+// synthesize deliverable (the last word of its block id: report, summary,
+// brief, document, ...) can only be judged missing, so no review could ACCEPT
+// and the final synthesize behind it would never run. The deliverable's content
+// belongs in that block's instruction. This catches items that name the
+// deliverable; it cannot catch a paraphrase or an item about a review's own
+// verdict, which the README rule leaves to the author.
+function validateAcceptanceEvidence(
+  filename: string,
+  config: Record<string, unknown>,
+) {
+  if (!Array.isArray(config.acceptance) || !Array.isArray(config.blocks)) return
+  const deliverables = new Set(
+    config.blocks
+      .filter(isRecord)
+      .filter((block) => block.kind === "synthesize")
+      .map((block) => String(block.id).split("-").pop() ?? "")
+      .filter((word) => /^\w+$/.test(word)),
+  )
+  for (const item of config.acceptance.filter(isRecord)) {
+    const text = String(item.text ?? "")
+    for (const word of deliverables) {
+      if (!new RegExp(`\\b${word}\\b`, "i").test(text)) continue
+      fail(
+        `${filename} acceptance ${item.id} names "${word}", the deliverable of a synthesize block that runs after the reviews; a review can only judge evidence that exists before it, so state a property of the work and leave the deliverable's content to that block's instruction`,
+      )
+    }
   }
 }
 

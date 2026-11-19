@@ -19,13 +19,13 @@ config:
   acceptance:
     - id: AC1
       text: >-
-        The decision solves the confirmed problem with the smallest reversible
-        option and names one credible alternative.
+        The proposal recommends the smallest reversible option that solves the
+        confirmed problem and names one credible alternative.
     - id: AC2
       text: >-
-        Scope, non-goals, acceptance checks, measurement, and rollback are
-        stated, and the remaining user-owned decision is exposed rather than
-        guessed.
+        The proposal states scope, non-goals, acceptance checks, measurement,
+        and rollback, and exposes the remaining user-owned decision rather
+        than guessing it.
   blocks:
     - id: product-briefing
       kind: explore
