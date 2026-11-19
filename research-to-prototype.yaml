@@ -4,8 +4,8 @@
 # here), an architect turns the survey into one design and names its riskiest
 # assumption, and the prototyper builds the smallest runnable form of the
 # target that also tests that assumption, under prototypes/. A verification
-# runs the prototype again from its own how_to_run, which must leave the
-# workspace unchanged, and a review attacks the conclusion. A final
+# runs the prototype again from its own how_to_run, which must write no
+# file anywhere, and a review attacks the conclusion. A final
 # synthesize reports the review decision to the parent: the strict review
 # gate requires a diff review to feed a required final gate.
 # Start it with
@@ -117,13 +117,15 @@ config:
         variables, ports), then the exact commands in order, each runnable as
         written from the workspace root and ending on its own (a recipe that
         starts a server also exercises and stops it), then the output that
-        marks success and the output that marks failure. The recipe must leave
-        the workspace exactly as it found it: every file a command writes
-        (outputs, logs, caches, copies of fixtures it would modify) goes to a
-        temporary directory, such as one made with mktemp -d, and is removed
-        when the command ends, so running it twice gives the same result and
-        the verification can run it as written without editing any file. Run
-        those commands once, exactly as written, and confirm the workspace is
+        marks success and the output that marks failure. The recipe must write
+        no file anywhere, not even a temporary one: workflow nodes may not
+        write outside the project, and the verification runs read-only, so a
+        command that creates, changes, or removes any file cannot be run
+        there. Feed fixtures through stdin, a heredoc, or arguments, keep
+        intermediate data in pipes or memory, and print results to stdout or
+        stderr; prerequisites must already hold, so the recipe installs and
+        builds nothing. Running it twice then gives the same result. Run those
+        commands once, exactly as written, and confirm the workspace is
         unchanged before you submit. Submit the files you created and a stable
         fingerprint of them, and name the command that computes it.
 
@@ -142,8 +144,8 @@ config:
         prerequisite, a command that needs guessing, a result that contradicts
         the observations, or a changed file outside prototypes/ is FAIL.
         Compare the reported files and fingerprint with the workspace before
-        and after the run; a how_to_run that changes any workspace file is
-        FAIL.
+        and after the run; a how_to_run that writes any file, temporary ones
+        included, is FAIL.
 
     - id: prototype-review
       kind: review
