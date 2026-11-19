@@ -48,8 +48,7 @@ config:
       text: >-
         how_to_run names the prerequisites and the exact commands, running them
         as written from the workspace root reproduces the observation, and
-        running them leaves every workspace file unchanged (files they write go
-        to a temporary directory).
+        running them writes no file anywhere, temporary files included.
     - id: AC4
       text: >-
         Every changed file lies under prototypes/, and the reported fingerprint
