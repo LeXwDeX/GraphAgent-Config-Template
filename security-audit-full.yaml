@@ -17,6 +17,22 @@ config:
     Assess the confirmed scope for exploitable code, authorization, secret,
     configuration, and upstream supply-chain risks using safe verified evidence.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        Every finding is bound to an affected version or path, reachable
+        behavior, a missing or bypassable control, a trigger, an impact, and
+        the current source fingerprint; a scanner alert alone is not a
+        finding.
+    - id: AC2
+      text: >-
+        Every proposed CRITICAL or HIGH item was verified with a safe local
+        check, and false positives are listed as refuted.
+    - id: AC3
+      text: >-
+        The upstream evidence covers provenance (origin, signatures,
+        checksums) for every relevant upstream and names what it could not
+        establish, and secrets appear only as redacted class and location.
   blocks:
     - id: security-scope
       kind: explore
@@ -68,11 +84,16 @@ config:
     - id: security-analysis
       kind: review
       depends_on: [vulnerability-evidence, authorization-evidence, upstream-supply-chain-evidence, secrets-config-evidence]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Build one deduplicated claim set. A scanner alert alone is not a finding:
         require an affected version or path, reachable behavior, missing or
         bypassable control, trigger, impact, and current source fingerprint.
         Preserve unresolved claims without inflating severity.
+        Completeness lens: at this checkpoint an acceptance item counts as
+        covered or partial when the evidence so far, or the verification step
+        still to run, can establish it, and as missing only when nothing in
+        the route can.
 
     - id: security-verification
       kind: verify
@@ -86,6 +107,7 @@ config:
     - id: security-decision
       kind: review
       depends_on: [security-verification]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Rank verified issues by exploitability, privileges, exposure, blast
         radius, data sensitivity, upstream confidence, and recovery cost.

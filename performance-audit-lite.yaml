@@ -9,13 +9,26 @@ config:
   name: performance-audit-lite
   max_concurrency: 2
   max_node_replan_attempts: 2
-  max_total_nodes: 10
+  max_total_nodes: 12
   node_defaults:
     worker_config:
       timeout_ms: 1800000
   objective: >-
     Verify one bounded performance concern against a repeatable user-relevant baseline.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The concern is tested against a repeatable baseline: workload,
+        environment, metric, threshold, and command.
+    - id: AC2
+      text: >-
+        The measurement records raw values and variance, so a bottleneck can
+        be told apart from noise and from a scale limit.
+    - id: AC3
+      text: >-
+        The measurement identifies the implementation path that explains the
+        cost, or records that none was found.
   blocks:
     - id: lite-performance-baseline
       kind: explore
@@ -27,13 +40,17 @@ config:
     - id: lite-performance-gate
       kind: review
       depends_on: [lite-performance-baseline]
+      lenses: [standards, intent, completeness]
       report_to_parent: true
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
         it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
-        route and control changes.
+        route and control changes. Completeness lens: at this gate an acceptance
+        item counts as covered or partial when the evidence names the check or
+        step that will establish it, and as missing only when it has no path to
+        evidence; no item is expected to be delivered yet.
 
     - id: lite-performance-measure
       kind: verify
@@ -46,6 +63,7 @@ config:
     - id: lite-performance-decision
       kind: review
       depends_on: [lite-performance-measure]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Decide whether the concern is reproduced and material. Separate a
         verified bottleneck from measurement noise, scale limit, correctness bug,

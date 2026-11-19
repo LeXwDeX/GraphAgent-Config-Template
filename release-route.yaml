@@ -2,8 +2,10 @@
 # the final ordered merge. Default is a human gate — release-execute only runs
 # after the parent confirms the release brief. Start it with
 # run.start { spec_path: "release-route", inputs: { objective } }: put the real
-# plan and repository in `objective`.
-title: "Release assembly: mechanism probe → version derivation → human gate → publish → verify"
+# plan and repository in `objective`. The publish step is a coding block, so the
+# strict review gate verifies and reviews it against its fingerprint (the commit
+# the release tag points to) before the report.
+title: "Release assembly: mechanism probe → version derivation → human gate → publish → verify → review → report"
 inputs:
   objective:
     description: >-
@@ -13,93 +15,108 @@ config:
   name: release-route
   max_concurrency: 2
   max_node_replan_attempts: 3
-  max_total_nodes: 10
+  max_total_nodes: 16
   node_defaults:
     worker_config:
       timeout_ms: 900000
-  nodes:
+  objective: >-
+    Assemble the release: probe the release mechanics, derive the version and
+    changelog, hold at a human gate, publish only after the parent confirms the
+    brief, then verify and review that the release landed as briefed.
+    Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The release brief names the mechanism, the candidate version derived
+        from the latest tag and the landed commit types, the changelog draft,
+        the exact publish commands, and the rollback path, and flags every
+        assumption.
+    - id: AC2
+      text: >-
+        Nothing is published before the parent has injected an explicit
+        confirmation of the brief.
+    - id: AC3
+      text: >-
+        The tag or release asset is visible on the platform with the exact
+        version string, and any release workflow run completed successfully.
+  blocks:
     - id: release-map
-      name: "probe release mechanics"
-      worker_type: explore
-      depends_on: []
-      prompt_template:
-        inline: >-
-          Request: {{objective}}
-
-          Probe the release mechanics of this repository for this request.
-          Identify the release pathway (release workflow dispatch vs platform
-          release creation vs package publish), the latest tag, branch
-          protection or ruleset constraints on releasing, and what the merge
-          history since the last tag contains. Report facts only.
+      kind: explore
+      instruction: >-
+        Probe the release mechanics of this repository for this request.
+        Identify the release pathway (release workflow dispatch vs platform
+        release creation vs package publish), the latest tag, branch
+        protection or ruleset constraints on releasing, and what the merge
+        history since the last tag contains. Report facts only.
 
     - id: release-plan
-      name: "derive version and draft changelog"
-      worker_type: plan
+      kind: plan
       depends_on: [release-map]
-      prompt_template:
-        inline: >-
-          From the release-map evidence, derive the candidate version (latest
-          tag plus landed commit types: feat → minor, fix → patch, breaking →
-          major) and draft the changelog grouped by type. Produce the complete
-          release brief: mechanism, version, changelog, publish steps, and
-          rollback path. Flag every assumption.
+      instruction: >-
+        From the release-map evidence, derive the candidate version (latest
+        tag plus landed commit types: feat → minor, fix → patch, breaking →
+        major) and draft the changelog grouped by type. Produce the complete
+        release brief: mechanism, version, changelog, publish steps, and
+        rollback path. Flag every assumption.
 
     - id: release-gate
-      name: "release human gate brief"
-      worker_type: general
+      kind: review
       depends_on: [release-plan]
+      lenses: [standards, intent, completeness]
       report_to_parent: true
-      required: true
       worker_config:
         timeout_ms: 600000
-      output_schema:
-        type: object
-        properties:
-          verdict:
-            type: string
-            enum: [proceed, hold]
-          brief:
-            type: string
-        required: [verdict, brief]
-      prompt_template:
-        inline: >-
-          Release gate. Consolidate the release-plan brief for human
-          confirmation: mechanism, candidate version, changelog draft, and the
-          exact publish command sequence. Default verdict hold — publishing is
-          irreversible and the parent must obtain the human decision; submit
-          proceed ONLY when the parent has injected an explicit confirmation.
+      instruction: >-
+        Release gate. The lanes judge the release-plan brief for human
+        confirmation: mechanism, candidate version, changelog draft, and the
+        exact publish command sequence. The decision defaults to REJECT (hold):
+        publishing is irreversible and the parent must obtain the human
+        decision, so it returns ACCEPT (proceed) ONLY when the lanes raise no
+        upheld action and the parent has injected an explicit confirmation of
+        the brief. Completeness lens: at this gate an acceptance item counts as
+        covered or partial when the brief names the step that will establish it,
+        and as missing only when it has no path to evidence; no item is
+        expected to be delivered yet.
 
     - id: release-execute
-      name: "publish the release"
-      worker_type: general
+      kind: coding
       depends_on: [release-gate]
-      condition: release-gate.output.verdict == "proceed"
-      prompt_template:
-        inline: >-
-          Execute the confirmed release exactly as briefed: create the tag,
-          write the changelog entry or release notes, and trigger the detected
-          release pathway. Record every command and its output; do not
-          improvise steps beyond the brief.
+      instruction: >-
+        Execute the confirmed release exactly as briefed. The change here is
+        the release itself, so there is no failing check to write first: record
+        that reason, then write the changelog entry or release-notes file,
+        create the tag, and trigger the detected release pathway. Record every
+        command and its output; do not improvise steps beyond the brief. Submit
+        the files you wrote as the changed files and, as the fingerprint, the
+        commit the release tag points to (name the command that prints it).
 
     - id: release-verify
-      name: "verify the release landed"
-      worker_type: general
+      kind: verify
       depends_on: [release-execute]
-      prompt_template:
-        inline: >-
-          Verify the release exists and matches the brief: the tag or release
-          asset is visible on the platform, the version string is exact, and
-          any release workflow run completed successfully. Cite the observed
-          evidence; PASS only on exact match.
+      instruction: >-
+        Verify the release exists and matches the brief: the tag or release
+        asset is visible on the platform, the version string is exact, and any
+        release workflow run completed successfully. Cite the observed
+        evidence; PASS only on exact match.
+
+    - id: release-review
+      kind: review
+      depends_on: [release-verify]
+      lenses: [standards, intent, completeness]
+      instruction: >-
+        Review the executed release against the confirmed brief and the
+        repository's release rules: the commands run are the briefed ones, the
+        changelog or notes match the landed commits, the published version and
+        fingerprint are what the verification observed, and nothing was
+        published beyond the brief. A deviation from the brief, or a claim the
+        evidence does not support, is a required action.
 
     - id: release-report
-      name: "release report"
-      worker_type: general
-      depends_on: [release-verify]
-      prompt_template:
-        inline: >-
-          Report the release outcome: mechanism used, published version,
-          verification evidence, and rollback path. Write the complete report
-          to a non-empty markdown file under the project
-          .opencode/workflow-reports/ directory, then submit ONLY that
-          absolute file path as your output.
+      kind: synthesize
+      depends_on: [release-review]
+      instruction: >-
+        Report the release outcome: mechanism used, published version,
+        verification evidence, review verdict, and rollback path. Write the
+        complete report to a non-empty markdown file under the project
+        .opencode/workflow-reports/ directory, then submit ONLY that absolute
+        file path as your output.

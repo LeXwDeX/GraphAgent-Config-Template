@@ -17,6 +17,20 @@ config:
     Produce an implementation-ready technical design with one owning module,
     explicit invariants, verified tradeoffs, and bounded migration packages.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The selected design names one owning interface and defines its data
+        flow, errors, and lifecycle, and the options compare at least two
+        interfaces with the rejected ones and their reasons.
+    - id: AC2
+      text: >-
+        The riskiest design assumption is tested by a reversible prototype or
+        named as an open risk, with its prediction stated first.
+    - id: AC3
+      text: >-
+        The selected design specifies migration and test seams, and names the
+        unresolved risks and every decision that belongs to the user.
   blocks:
     - id: existing-system
       kind: explore
@@ -68,6 +82,7 @@ config:
     - id: design-review
       kind: review
       depends_on: [design-verification]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Review the design for depth, leverage, locality, domain fidelity,
         recoverability, security, and operational clarity. Reject speculative

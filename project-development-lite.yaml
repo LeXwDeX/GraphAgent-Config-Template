@@ -9,13 +9,25 @@ config:
   name: project-development-lite
   max_concurrency: 2
   max_node_replan_attempts: 2
-  max_total_nodes: 12
+  max_total_nodes: 14
   node_defaults:
     worker_config:
       timeout_ms: 1800000
   objective: >-
     Implement a bounded, confirmed change with one behavior check and the required package gates.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The change delivers the bounded behavior, with one public behavior
+        check that failed before the change and passes after it.
+    - id: AC2
+      text: >-
+        The focused check, the affected package typecheck, and every documented
+        gate the changed files trigger passed.
+    - id: AC3
+      text: >-
+        No unrelated cleanup or speculative abstraction entered the diff.
   blocks:
     - id: lite-development-plan
       kind: plan
@@ -27,13 +39,17 @@ config:
     - id: lite-development-gate
       kind: review
       depends_on: [lite-development-plan]
+      lenses: [standards, intent, completeness]
       report_to_parent: true
       instruction: >-
         Decide whether the evidence still satisfies this lite workflow's bounded,
         reversible, single-owner, no-high-risk premises. Return ACCEPT only when
         it does. Otherwise return REJECT with exact reasons and
         required actions. Do not name another workflow; the parent Router owns
-        route and control changes.
+        route and control changes. Completeness lens: at this gate an acceptance
+        item counts as covered or partial when the evidence names the check or
+        step that will establish it, and as missing only when it has no path to
+        evidence; no item is expected to be delivered yet.
 
     - id: lite-development-code
       kind: coding
@@ -52,6 +68,7 @@ config:
     - id: lite-development-review
       kind: review
       depends_on: [lite-development-verify]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Check the diff against repository standards, confirmed intent, test
         sensitivity, and user-visible behavior. Report blockers and residual risk.

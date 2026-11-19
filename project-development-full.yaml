@@ -18,6 +18,20 @@ config:
     Deliver the confirmed change through plan-sized disjoint implementation
     slices, behavior-first checks, deterministic gates, and whole-change review.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The change delivers the behavior described in the workflow objective
+        at its public seam, and no out-of-scope change entered the diff.
+    - id: AC2
+      text: >-
+        Every documented gate the change triggers ran against the exact
+        implementation fingerprint and passed, or the verification names the
+        gate that did not run.
+    - id: AC3
+      text: >-
+        Generated outputs, migrations, and contracts that the change triggers
+        are updated together with it.
   blocks:
     - id: development-map
       kind: explore
@@ -68,6 +82,7 @@ config:
     - id: development-review
       kind: review
       depends_on: [development-gates]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Review the complete change on separate Standards, Intent, and triggered
         risk axes. Verify user-visible behavior, architecture rules, test

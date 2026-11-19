@@ -44,15 +44,20 @@ jobs:
         with:
           bun-version-file: runtime/package.json
 
-      - name: Validate route catalog
-        run: bun script/validate-route-catalog.ts "$GITHUB_WORKSPACE"
-
-      - name: Test route catalog guardrails
-        run: bun test script/validate-route-catalog.test.ts
-
       - name: Install runtime dependencies
         working-directory: runtime
         run: bun install --frozen-lockfile
+
+      # A session with DAG mode on starts every workflow under the strict review
+      # gate, so each template is validated as its author declared it and under
+      # strict, with the pinned runtime's authoring module.
+      - name: Validate route catalog under the authored and strict review gates
+        run: bun script/validate-route-catalog.ts "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/runtime"
+
+      - name: Test route catalog guardrails
+        env:
+          GRAPHAGENT_RUNTIME: ${{ github.workspace }}/runtime
+        run: bun test script/validate-route-catalog.test.ts
 
       - name: Validate every root workflow YAML
         working-directory: runtime/packages/graphagent

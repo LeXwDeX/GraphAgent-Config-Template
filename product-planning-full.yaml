@@ -18,6 +18,22 @@ config:
     Produce a decision-ready product brief from verified user, market, product,
     and delivery evidence, using prototypes only for material uncertainties.
     Request: {{objective}}
+  acceptance:
+    - id: AC1
+      text: >-
+        The problem, user, and outcome rest on observed evidence; assumptions
+        and user-owned decisions are listed apart from facts.
+    - id: AC2
+      text: >-
+        The options are materially different, include the smallest viable
+        option and deferral, and each names the assumption that most threatens
+        it.
+    - id: AC3
+      text: >-
+        Any prototype states its prediction before the run and reports its
+        result as evidence, and the validation checks the option against the
+        confirmed problem, constraints, success measures, rollback, and
+        non-goals.
   blocks:
     - id: problem-evidence
       kind: explore
@@ -69,6 +85,7 @@ config:
     - id: product-decision
       kind: review
       depends_on: [product-validation]
+      lenses: [standards, intent, completeness]
       instruction: >-
         Make one evidence-backed recommendation. Distinguish facts, inferences,
         assumptions, and user-owned decisions; reject options whose value or
